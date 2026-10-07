@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.edu/shared-agentic-va/tool-result.schema.json",
+  "title": "ToolResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tool_call_id",
+    "tool_name",
+    "tool_version",
+    "status",
+    "output",
+    "evidence_refs",
+    "warnings",
+    "reproducibility"
+  ],
+  "properties": {
+    "tool_call_id": {"type": "string", "minLength": 1},
+    "tool_name": {"type": "string", "pattern": "^[a-z][a-z0-9-]*\\.[a-z][a-z0-9-_]*$"},
+    "tool_version": {"type": "string", "minLength": 1},
+    "status": {"enum": ["succeeded", "failed"]},
+    "output": {"type": "object"},
+    "evidence_refs": {"type": "array", "items": {"type": "string"}},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "reproducibility": {
+      "type": "object",
+      "required": ["parameters"],
+      "properties": {
+        "dataset_checksum": {"type": ["string", "null"]},
+        "code_version": {"type": ["string", "null"]},
+        "parameters": {"type": "object"}
+      }
+    }
+  }
+}

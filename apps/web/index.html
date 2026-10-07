@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SeasonLens — Observation-first prototype</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div>
+        <p class="eyebrow">Ecological observation study</p>
+        <h1>SeasonLens</h1>
+      </div>
+      <button id="new-session" class="quiet-button" type="button">New session</button>
+    </header>
+    <main>
+      <nav class="progress" aria-label="Study progress">
+        <span data-step="observe">1. Observe</span>
+        <span data-step="commit">2. Commit</span>
+        <span data-step="hint">3. Hint</span>
+        <span data-step="reobserve">4. Re-observe</span>
+        <span data-step="reveal">5. Reveal</span>
+        <span data-step="reflect">6. Reflect</span>
+      </nav>
+      <div id="status" role="status" aria-live="polite"></div>
+      <section id="app" class="study-card" aria-live="polite">
+        <p>Preparing the observation study…</p>
+      </section>
+      <details id="debug-panel" class="debug-panel" hidden>
+        <summary>Researcher controls and study log</summary>
+        <div class="researcher-config attempt-summary">
+          <h3>New-session study configuration</h3>
+          <label for="study-mode">Study mode</label>
+          <select id="study-mode">
+            <option value="training">Training — conditional guidance, reveal, reflection</option>
+            <option value="unaided_test">Unaided test — no guidance or reveal</option>
+            <option value="transfer">Transfer — unfamiliar item, no guidance or reveal</option>
+          </select>
+          <label for="study-condition">Experimental condition</label>
+          <select id="study-condition">
+            <option value="answer-first">Group A — Answer-first</option>
+            <option value="observation-first-yoked">Group B — Yoked guidance (planned / not fully implemented)</option>
+            <option value="observation-first-contingent" selected>Group C — Error-contingent adaptive guidance</option>
+          </select>
+          <label for="study-item">Observation item</label>
+          <select id="study-item">
+            <option value="">Loading authored items…</option>
+          </select>
+          <p class="commit-note">Selections apply when starting a new session. Unaided modes suppress guidance regardless of group.</p>
+        </div>
+        <div class="debug-actions">
+          <button id="refresh-log" type="button">Refresh JSON</button>
+          <button id="download-log" type="button">Download JSON</button>
+          <button id="download-csv" type="button">Download CSV</button>
+          <button id="reset-item" class="quiet-button" type="button">Reset current item</button>
+        </div>
+        <div id="researcher-summary"></div>
+        <form id="hint-override-form" class="attempt-summary">
+          <label for="hint-override">Manual authored hint override (during Hint)</label>
+          <select id="hint-override"></select>
+          <button id="apply-hint" type="submit">Show chosen hint</button>
+        </form>
+        <form id="researcher-notes-form" class="attempt-summary">
+          <label for="researcher-notes">Researcher notes (separate from participant responses)</label>
+          <textarea id="researcher-notes" placeholder="Optional: hesitation, redraw, confusion, asked for clarification, hint too vague/direct"></textarea>
+          <button type="submit">Save researcher notes</button>
+        </form>
+        <pre id="debug-output">Complete an action to inspect its log.</pre>
+      </details>
+    </main>
+    <footer>
+      Select the region that best contains the visual evidence supporting your judgement.
+    </footer>
+  </body>
+</html>

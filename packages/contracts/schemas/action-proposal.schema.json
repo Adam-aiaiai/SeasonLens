@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.edu/shared-agentic-va/action-proposal.schema.json",
+  "title": "ActionProposal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "proposal_id",
+    "extension_id",
+    "action_type",
+    "actor",
+    "payload",
+    "evidence_refs",
+    "expected_state_version",
+    "requires_confirmation"
+  ],
+  "properties": {
+    "proposal_id": {"type": "string", "minLength": 1},
+    "extension_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+    "action_type": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"},
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "properties": {
+        "type": {"enum": ["human", "agent", "system", "tool"]},
+        "id": {"type": "string", "minLength": 1}
+      }
+    },
+    "payload": {"type": "object"},
+    "evidence_refs": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "expected_state_version": {"type": "integer", "minimum": 0},
+    "requires_confirmation": {"type": "boolean"},
+    "rationale": {"type": ["string", "null"]}
+  }
+}

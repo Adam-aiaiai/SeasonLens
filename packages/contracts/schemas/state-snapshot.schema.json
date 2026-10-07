@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.edu/shared-agentic-va/state-snapshot.schema.json",
+  "title": "StateSnapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["extension_id", "aggregate_id", "version", "data"],
+  "properties": {
+    "extension_id": {"type": "string", "minLength": 1},
+    "aggregate_id": {"type": "string", "minLength": 1},
+    "version": {"type": "integer", "minimum": 0},
+    "data": {"type": "object"}
+  }
+}

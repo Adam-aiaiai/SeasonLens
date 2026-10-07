@@ -1,0 +1,10 @@
+id: vizworkspace
+name: VizWorkspace
+version: 0.1.0
+agent_modes: [live-llm, replay, human-authored]
+actions:
+  auto_read: [REPLAY_EVIDENCE_STATE, CHALLENGE_RELATION]
+  auto_compute: [EXECUTE_VISUAL_ACTION]
+  human_commit: [PROPOSE_QUESTION, PROPOSE_CLAIM, PROPOSE_VISUAL_ACTION, BIND_SELECTION_AS_EVIDENCE, PROPOSE_SUPPORT, PROPOSE_REBUT, CONTEST_RELATION, ACCEPT_RELATION, REVISE_CLAIM]
+projections: [current-visualization, argument-workspace, structured-history, activity-replay-strip, relation-inspector, ownership-contested-panel]
+experiment_conditions: [vizworkspace-structured-history, vizworkspace-shared-argument]

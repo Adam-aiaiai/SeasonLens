@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "seasonlens-extension"
+version = "0.1.0"
+description = "Deterministic observation-first SeasonLens extension"
+requires-python = ">=3.11"
+dependencies = ["shared-agentic-va-core>=0.1.0"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "../../../packages/backend-core/src"]
+testpaths = ["tests"]

@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# TypeScript
+node_modules/
+dist/
+
+# Editors and OS
+.DS_Store
+.vscode/
+
+# Runtime and study data
+.env
+*.sqlite3
+runtime-data/
+study-exports/

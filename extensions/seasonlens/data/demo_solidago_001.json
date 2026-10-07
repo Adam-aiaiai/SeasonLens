@@ -1,0 +1,181 @@
+{
+  "item_id": "demo_solidago_001",
+  "plant_name": "Canada goldenrod (Solidago canadensis)",
+  "image_path": "/assets/real/solidago_canadensis_001.jpg",
+  "cue_family": "Flower",
+  "target_structure": "Upper flowering region with yellow inflorescences",
+  "accepted_cue_keywords": [
+    "yellow flower clusters",
+    "yellow flowers",
+    "open yellow flowers",
+    "open flowers",
+    "flower clusters",
+    "inflorescence",
+    "flowers near the top",
+    "flowers at the top",
+    "yellow blossoms",
+    "open blooms"
+  ],
+  "stage_options": [
+    {"id": "vegetative_growth", "label": "Vegetative growth"},
+    {"id": "flower_buds_developing", "label": "Flower buds developing"},
+    {"id": "flowering", "label": "Flowering"},
+    {"id": "fruiting", "label": "Fruiting"},
+    {"id": "not_sure", "label": "Not sure"}
+  ],
+  "correct_stage_id": "flowering",
+  "accepted_interpretation_keywords": [
+    "flowering",
+    "flowering stage",
+    "in flower",
+    "blooming",
+    "bloom"
+  ],
+  "expert_cue": "The upper part of the plant contains clusters of open yellow flowers.",
+  "expert_interpretation": "The visible open flowers indicate the flowering stage.",
+  "correct_feedback": "Good. The upper flowering structures provide evidence consistent with your stage choice.",
+  "prompts": {
+    "observation": "Observation — Describe only what you can directly see in the selected region.",
+    "interpretation": "Which stage best describes the plant?"
+  },
+  "hints": {
+    "REGION_MISS": [
+      {
+        "id": "demo_solidago_region_01",
+        "level": 1,
+        "text": "Look again at the upper part of the plant.",
+        "type": "attention_directing"
+      },
+      {
+        "id": "demo_solidago_region_02",
+        "level": 2,
+        "text": "Focus on the branching structures near the top.",
+        "type": "region_directing"
+      },
+      {
+        "id": "demo_solidago_region_03",
+        "level": 3,
+        "text": "Check the clustered structures extending from the upper stems.",
+        "type": "feature_directing"
+      }
+    ],
+    "CUE_MISIDENTIFIED": [
+      {
+        "id": "demo_solidago_feature_01",
+        "level": 1,
+        "text": "Look closely at the structures grouped near the top of the plant.",
+        "type": "attention_directing"
+      },
+      {
+        "id": "demo_solidago_feature_02",
+        "level": 2,
+        "text": "Notice their colour and whether individual flower structures are visible.",
+        "type": "feature_directing"
+      },
+      {
+        "id": "demo_solidago_feature_03",
+        "level": 3,
+        "text": "Check whether the clusters contain open yellow flowers rather than only closed buds.",
+        "type": "feature_directing"
+      }
+    ],
+    "INTERPRETATION_ERROR": [
+      {
+        "id": "demo_solidago_stage_01",
+        "level": 1,
+        "text": "Use the visible flower structures to guide your stage choice.",
+        "type": "interpretation_prompt"
+      },
+      {
+        "id": "demo_solidago_stage_02",
+        "level": 2,
+        "text": "Compare whether the upper clusters are still developing or already open.",
+        "type": "interpretation_directing"
+      },
+      {
+        "id": "demo_solidago_stage_03",
+        "level": 3,
+        "text": "Use the presence of clearly open yellow flowers as the deciding evidence for the stage.",
+        "type": "interpretation_directing"
+      }
+    ],
+    "CORRECT": [
+      {
+        "id": "demo_solidago_correct_01",
+        "level": 1,
+        "text": "Good. The upper flowering structures provide evidence consistent with your stage choice.",
+        "type": "evidence_checking"
+      }
+    ]
+  },
+  "target_region": {
+    "id": "upper_flowering_region",
+    "label": "upper yellow inflorescences",
+    "rect": {
+      "x": 0.31,
+      "y": 0.04,
+      "width": 0.62,
+      "height": 0.4
+    }
+  },
+  "region_iou_threshold": 0.2,
+  "semantic_region_iou_threshold": 0.2,
+  "distractor_regions": [
+    {
+      "id": "middle_leaf_region",
+      "label": "middle leaves",
+      "rect": {
+        "x": 0.42,
+        "y": 0.43,
+        "width": 0.22,
+        "height": 0.23
+      }
+    },
+    {
+      "id": "lower_stem",
+      "label": "lower stem",
+      "rect": {
+        "x": 0.31,
+        "y": 0.65,
+        "width": 0.18,
+        "height": 0.32
+      }
+    },
+    {
+      "id": "background_vegetation",
+      "label": "background vegetation",
+      "rect": {
+        "x": 0.03,
+        "y": 0.25,
+        "width": 0.22,
+        "height": 0.27
+      }
+    }
+  ],
+  "region_hints": {
+    "middle_leaf_region": [
+      {
+        "id": "demo_solidago_middle_leaves_01",
+        "level": 1,
+        "type": "contrastive_attention",
+        "text": "You are focusing on leaves. Look toward the upper flowering structures."
+      }
+    ],
+    "lower_stem": [
+      {
+        "id": "demo_solidago_lower_stem_01",
+        "level": 1,
+        "type": "spatial_redirect",
+        "text": "You are focusing too low on the plant. Follow the stem upward toward the branching top."
+      }
+    ],
+    "background_vegetation": [
+      {
+        "id": "demo_solidago_background_01",
+        "level": 1,
+        "type": "spatial_redirect",
+        "text": "You are focusing on surrounding vegetation. Return to the tall foreground plant."
+      }
+    ]
+  }
+}

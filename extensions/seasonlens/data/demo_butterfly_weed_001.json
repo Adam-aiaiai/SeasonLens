@@ -1,0 +1,182 @@
+{
+  "item_id": "demo_butterfly_weed_001",
+  "plant_name": "Butterfly weed (Asclepias tuberosa)",
+  "image_path": "/assets/real/butterfly_weed_001.jpg",
+  "cue_family": "Flower",
+  "target_structure": "Upper orange flower cluster containing open flowers and unopened buds",
+  "accepted_cue_keywords": [
+    "open flowers and buds",
+    "open flowers and unopened buds",
+    "orange flowers and buds",
+    "open orange flowers",
+    "unopened buds",
+    "closed buds",
+    "mixed flower cluster",
+    "flowers and buds",
+    "open blooms and buds",
+    "orange blossoms and buds"
+  ],
+  "stage_options": [
+    {"id": "flower_buds_only", "label": "Only flower buds are present"},
+    {"id": "active_flowering_with_unopened_buds", "label": "Active flowering with some unopened buds"},
+    {"id": "flowering_finished", "label": "Flowering has completely finished"},
+    {"id": "fruiting", "label": "Fruiting"},
+    {"id": "not_sure", "label": "Not sure"}
+  ],
+  "correct_stage_id": "active_flowering_with_unopened_buds",
+  "accepted_interpretation_keywords": [
+    "active flowering with some unopened buds",
+    "active flowering with unopened buds",
+    "flowering with some unopened buds",
+    "flowering with unopened buds",
+    "active flowering",
+    "still flowering"
+  ],
+  "expert_cue": "The upper cluster contains both open orange flowers and rounded unopened buds.",
+  "expert_interpretation": "The mixture indicates active flowering that is still continuing as additional buds remain unopened.",
+  "correct_feedback": "Good. You used both the open flowers and unopened buds to support the stage judgement.",
+  "prompts": {
+    "observation": "Observation — Describe only what you can directly see in the selected region.",
+    "interpretation": "Which stage best describes the plant?"
+  },
+  "hints": {
+    "REGION_MISS": [
+      {
+        "id": "demo_butterfly_weed_region_01",
+        "level": 1,
+        "text": "Look again at the upper part of the plant.",
+        "type": "attention_directing"
+      },
+      {
+        "id": "demo_butterfly_weed_region_02",
+        "level": 2,
+        "text": "Focus on the orange flower cluster near the top.",
+        "type": "region_directing"
+      },
+      {
+        "id": "demo_butterfly_weed_region_03",
+        "level": 3,
+        "text": "Check the cluster that contains both open flowers and rounded closed structures.",
+        "type": "feature_directing"
+      }
+    ],
+    "CUE_MISIDENTIFIED": [
+      {
+        "id": "demo_butterfly_weed_feature_01",
+        "level": 1,
+        "text": "Look closely at the different structures within the same flower cluster.",
+        "type": "attention_directing"
+      },
+      {
+        "id": "demo_butterfly_weed_feature_02",
+        "level": 2,
+        "text": "Notice whether all of the structures look the same.",
+        "type": "feature_directing"
+      },
+      {
+        "id": "demo_butterfly_weed_feature_03",
+        "level": 3,
+        "text": "Compare the open orange flowers with the rounded unopened buds in the same cluster.",
+        "type": "feature_directing"
+      }
+    ],
+    "INTERPRETATION_ERROR": [
+      {
+        "id": "demo_butterfly_weed_stage_01",
+        "level": 1,
+        "text": "Base your stage choice on the combination of visible structures in the cluster.",
+        "type": "interpretation_prompt"
+      },
+      {
+        "id": "demo_butterfly_weed_stage_02",
+        "level": 2,
+        "text": "Consider whether the plant shows only buds, only finished flowers, or active flowering with some buds still unopened.",
+        "type": "interpretation_directing"
+      },
+      {
+        "id": "demo_butterfly_weed_stage_03",
+        "level": 3,
+        "text": "Use the coexistence of open flowers and unopened buds as the deciding evidence for the stage.",
+        "type": "interpretation_directing"
+      }
+    ],
+    "CORRECT": [
+      {
+        "id": "demo_butterfly_weed_correct_01",
+        "level": 1,
+        "text": "Good. You used both the open flowers and unopened buds to support the stage judgement.",
+        "type": "evidence_checking"
+      }
+    ]
+  },
+  "target_region": {
+    "id": "mixed_flower_cluster",
+    "label": "upper orange cluster with open flowers and unopened buds",
+    "rect": {
+      "x": 0.3,
+      "y": 0.01,
+      "width": 0.6,
+      "height": 0.46
+    }
+  },
+  "region_iou_threshold": 0.2,
+  "semantic_region_iou_threshold": 0.2,
+  "distractor_regions": [
+    {
+      "id": "leaf_region",
+      "label": "middle leaves",
+      "rect": {
+        "x": 0.2,
+        "y": 0.48,
+        "width": 0.48,
+        "height": 0.24
+      }
+    },
+    {
+      "id": "lower_stem",
+      "label": "lower stem and leaves",
+      "rect": {
+        "x": 0.26,
+        "y": 0.72,
+        "width": 0.31,
+        "height": 0.26
+      }
+    },
+    {
+      "id": "background_vegetation",
+      "label": "background vegetation",
+      "rect": {
+        "x": 0.72,
+        "y": 0.55,
+        "width": 0.24,
+        "height": 0.25
+      }
+    }
+  ],
+  "region_hints": {
+    "leaf_region": [
+      {
+        "id": "demo_butterfly_weed_leaf_01",
+        "level": 1,
+        "type": "contrastive_attention",
+        "text": "You are focusing on leaves. Look higher at the orange reproductive structures."
+      }
+    ],
+    "lower_stem": [
+      {
+        "id": "demo_butterfly_weed_lower_stem_01",
+        "level": 1,
+        "type": "spatial_redirect",
+        "text": "You are focusing on the lower stem. Follow it upward toward the flower cluster."
+      }
+    ],
+    "background_vegetation": [
+      {
+        "id": "demo_butterfly_weed_background_01",
+        "level": 1,
+        "type": "spatial_redirect",
+        "text": "You are focusing on surrounding vegetation. Return to the main flowering plant."
+      }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+id: seasonlens
+name: SeasonLens
+version: 0.2.0
+agent_modes: [rule-policy]
+actions:
+  auto_read: []
+  auto_compute: [CLASSIFY_DIFFICULTY, SHOW_POSITIVE_FEEDBACK, SELECT_ALLOWED_HINT]
+  human_commit: [RECORD_INITIAL_OBSERVATION, BEGIN_REOBSERVATION, RECORD_REOBSERVATION, REVEAL_EXPERT_CUE, BEGIN_REFLECTION, RECORD_FEEDBACK_RESPONSE]
+  study_admin: [OVERRIDE_AUTHORED_HINT, RECORD_RESEARCHER_NOTE]
+projections: [field-observation-flow, region-selection-overlay]
+experiment_conditions: [answer-first, observation-first-yoked, observation-first-contingent]

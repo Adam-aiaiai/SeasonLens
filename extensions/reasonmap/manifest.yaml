@@ -1,0 +1,10 @@
+id: reasonmap
+name: ReasonMap
+version: 0.1.0
+agent_modes: [live-llm, replay, human-authored]
+actions:
+  auto_read: [TRACE_IMPACT]
+  auto_compute: [VALIDATE_PREDICATE, RERUN_ANALYSIS_STATE]
+  human_commit: [EXTRACT_ASSERTIONS, PROPOSE_DEPENDENCY, BIND_EVIDENCE, INVALIDATE_ROOT, REVALIDATE_RECORD, SUPERSEDE_ASSERTION, RETRACT_ASSERTION, FINISH_REPAIR]
+projections: [provenance-graph, semantic-table, impact-panel, replay-view, version-diff, repair-checklist]
+experiment_conditions: [reasonmap-semantic-table, reasonmap-provenance-graph]

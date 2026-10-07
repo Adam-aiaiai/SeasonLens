@@ -1,0 +1,10 @@
+id: replanai
+name: RePlanAI
+version: 0.1.0
+agent_modes: [rule-policy, replay, live-llm]
+actions:
+  auto_read: []
+  auto_compute: [SOLVE_REPAIR, REQUEST_ALTERNATIVE, COMPUTE_MINIMAL_RELAXATIONS]
+  human_commit: [PARSE_DISRUPTION, ADD_COMMITMENT, CHANGE_COMMITMENT, PROTECT_DURING_PREVIEW, APPROVE_RELAXATION, REJECT_REPAIR, ACCEPT_REPAIR, UNDO_ACCEPTED_REPAIR]
+projections: [calendar-plan, commitment-editor, repair-preview, constraint-conflict-panel, relaxation-negotiation, plan-version-history]
+experiment_conditions: [commitments-absent-review-only, commitments-absent-negotiable, commitments-present-review-only, commitments-present-negotiable]

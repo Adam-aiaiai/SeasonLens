@@ -1,0 +1,14 @@
+pyproject.toml
+src/shared_agentic_va_core.egg-info/PKG-INFO
+src/shared_agentic_va_core.egg-info/SOURCES.txt
+src/shared_agentic_va_core.egg-info/dependency_links.txt
+src/shared_agentic_va_core.egg-info/requires.txt
+src/shared_agentic_va_core.egg-info/top_level.txt
+src/shared_platform/__init__.py
+src/shared_platform/adapters.py
+src/shared_platform/contracts.py
+src/shared_platform/policy.py
+src/shared_platform/ports.py
+src/shared_platform/registry.py
+src/shared_platform/runtime.py
+tests/test_policy_and_state.py

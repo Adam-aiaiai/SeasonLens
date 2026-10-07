@@ -1,0 +1,10 @@
+id: mosaic
+name: MOSAIC
+version: 0.1.0
+agent_modes: [live-llm, replay, human-authored]
+actions:
+  auto_read: [COMPARE_ROW, COMPARE_COLUMN, RETRIEVE_OBJECTS, SUMMARIZE_LIMITS]
+  auto_compute: [RUN_CELL, RUN_MATRIX, CLASSIFY_SENSITIVITY]
+  human_commit: [PROPOSE_DEFINITION, ADMIT_DEFINITION, PROPOSE_DATA_CONDITION, DRAFT_QUALIFIED_CLAIM]
+projections: [matrix-overview, equivalent-table, cell-comparison, object-evidence-drawer, coverage-missingness-panel, qualified-claim-editor]
+experiment_conditions: [single-condition-reference, equivalent-table, visual-matrix]

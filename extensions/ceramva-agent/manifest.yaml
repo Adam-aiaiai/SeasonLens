@@ -1,0 +1,10 @@
+id: ceramva-agent
+name: CeramVA-Agent
+version: 0.1.0
+agent_modes: [live-llm, replay, human-authored]
+actions:
+  auto_read: [COMPARE_OPERATIONALIZATIONS, RETRIEVE_OBJECT_EVIDENCE, CHALLENGE_PROFILE]
+  auto_compute: [CHECK_ADMISSIBILITY, COMPILE_ANALYSIS_SPEC, RUN_SPEC, RUN_CHALLENGE, CLASSIFY_PROFILE]
+  human_commit: [PARSE_RESEARCH_QUESTION, PROPOSE_OPERATIONALIZATION, ADMIT_OPERATIONALIZATION, DRAFT_QUALIFIED_CLAIM]
+projections: [operationalization-editor, visual-osp, equivalent-table, definition-comparison, object-evidence-drawer, challenge-panel, qualified-claim-editor]
+experiment_conditions: [single-definition-reference, equivalent-table, visual-osp]

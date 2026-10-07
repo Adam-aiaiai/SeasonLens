@@ -1,0 +1,182 @@
+{
+  "item_id": "demo_anemone_001",
+  "plant_name": "Virginia anemone (Anemone virginiana)",
+  "image_path": "/assets/real/anemone_virginiana_001.jpg",
+  "cue_family": "Flower bud",
+  "target_structure": "Prominent closed flower bud above the leaves",
+  "accepted_cue_keywords": [
+    "rounded bud",
+    "rounded buds",
+    "closed bud",
+    "closed buds",
+    "flower bud",
+    "flower buds",
+    "unopened bud",
+    "unopened buds",
+    "swollen bud",
+    "swollen buds",
+    "petals not open"
+  ],
+  "stage_options": [
+    {"id": "no_reproductive_structures", "label": "No visible reproductive structures"},
+    {"id": "flower_buds_present", "label": "Flower buds present"},
+    {"id": "open_flowering", "label": "Open flowering"},
+    {"id": "fruiting", "label": "Fruiting"},
+    {"id": "not_sure", "label": "Not sure"}
+  ],
+  "correct_stage_id": "flower_buds_present",
+  "accepted_interpretation_keywords": [
+    "flower buds present",
+    "flower bud present",
+    "buds present",
+    "bud stage",
+    "flower buds"
+  ],
+  "expert_cue": "Several rounded flower buds are visible above the leaves, and their petals have not opened.",
+  "expert_interpretation": "The closed rounded structures indicate that flower buds are present.",
+  "correct_feedback": "Good. The visible evidence you selected is consistent with the current stage.",
+  "prompts": {
+    "observation": "Observation — Describe only what you can directly see in the selected region.",
+    "interpretation": "Which stage best describes the plant?"
+  },
+  "hints": {
+    "REGION_MISS": [
+      {
+        "id": "demo_anemone_region_01",
+        "level": 1,
+        "text": "Look again at the upper part of the plant.",
+        "type": "attention_directing"
+      },
+      {
+        "id": "demo_anemone_region_02",
+        "level": 2,
+        "text": "Focus on the ends of the upright stems.",
+        "type": "region_directing"
+      },
+      {
+        "id": "demo_anemone_region_03",
+        "level": 3,
+        "text": "Check the rounded structures located at the tips of those stems.",
+        "type": "feature_directing"
+      }
+    ],
+    "CUE_MISIDENTIFIED": [
+      {
+        "id": "demo_anemone_feature_01",
+        "level": 1,
+        "text": "Look closely at the shape of the structures in your selected region.",
+        "type": "attention_directing"
+      },
+      {
+        "id": "demo_anemone_feature_02",
+        "level": 2,
+        "text": "Notice whether the structures are rounded and still enclosed.",
+        "type": "feature_directing"
+      },
+      {
+        "id": "demo_anemone_feature_03",
+        "level": 3,
+        "text": "Check whether petals are visible or whether the structures remain closed.",
+        "type": "feature_directing"
+      }
+    ],
+    "INTERPRETATION_ERROR": [
+      {
+        "id": "demo_anemone_stage_01",
+        "level": 1,
+        "text": "Base your stage choice only on the visible reproductive structures.",
+        "type": "interpretation_prompt"
+      },
+      {
+        "id": "demo_anemone_stage_02",
+        "level": 2,
+        "text": "Compare whether the structures are still closed or have visibly opened.",
+        "type": "interpretation_directing"
+      },
+      {
+        "id": "demo_anemone_stage_03",
+        "level": 3,
+        "text": "Use whether the petals are enclosed or expanded as the deciding evidence for the stage.",
+        "type": "interpretation_directing"
+      }
+    ],
+    "CORRECT": [
+      {
+        "id": "demo_anemone_correct_01",
+        "level": 1,
+        "text": "Good. The visible evidence you selected is consistent with the current stage.",
+        "type": "evidence_checking"
+      }
+    ]
+  },
+  "target_region": {
+    "id": "upper_bud_region",
+    "label": "prominent upper closed flower bud",
+    "rect": {
+      "x": 0.31,
+      "y": 0.07,
+      "width": 0.11,
+      "height": 0.2
+    }
+  },
+  "region_iou_threshold": 0.25,
+  "semantic_region_iou_threshold": 0.25,
+  "distractor_regions": [
+    {
+      "id": "large_leaf_region",
+      "label": "large foreground leaves",
+      "rect": {
+        "x": 0.25,
+        "y": 0.58,
+        "width": 0.5,
+        "height": 0.39
+      }
+    },
+    {
+      "id": "middle_stem",
+      "label": "middle upright stem",
+      "rect": {
+        "x": 0.34,
+        "y": 0.29,
+        "width": 0.08,
+        "height": 0.27
+      }
+    },
+    {
+      "id": "background_vegetation",
+      "label": "background vegetation",
+      "rect": {
+        "x": 0.7,
+        "y": 0.2,
+        "width": 0.25,
+        "height": 0.31
+      }
+    }
+  ],
+  "region_hints": {
+    "large_leaf_region": [
+      {
+        "id": "demo_anemone_large_leaf_01",
+        "level": 1,
+        "type": "contrastive_attention",
+        "text": "You are focusing on leaves. Look higher on the plant for reproductive structures."
+      }
+    ],
+    "middle_stem": [
+      {
+        "id": "demo_anemone_middle_stem_01",
+        "level": 1,
+        "type": "spatial_redirect",
+        "text": "You are focusing on the stem. Follow it upward and inspect the structure at its tip."
+      }
+    ],
+    "background_vegetation": [
+      {
+        "id": "demo_anemone_background_01",
+        "level": 1,
+        "type": "spatial_redirect",
+        "text": "You are focusing on background vegetation. Return to the main foreground plant."
+      }
+    ]
+  }
+}
