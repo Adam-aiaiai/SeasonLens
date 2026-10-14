@@ -42,7 +42,8 @@ shipped event handlers with DOM doubles; they are not a real-browser visual test
 
 1. **Observe:** drag on the plant image to select the region that best contains
    the visual evidence supporting the judgement. Describe only directly visible
-   evidence, choose one item-specific stage option, and record confidence (1–5).
+   evidence, choose one item-specific stage option, explain why the image supports
+   that choice, select the main judgement source, and record confidence (1–5).
 2. **Commit:** choose **Review and commit** to review the draft. **Edit response /
    redraw** returns to Observe with the draft intact. **Commit observation**
    permanently records the initial attempt and runs deterministic layered diagnosis.
@@ -263,7 +264,7 @@ is append-only. Reset and item advancement preserve old files. Existing logs fro
 the point-selection MVP remain untouched; newly created logs use rectangles.
 
 Logs include IDs/condition, stage transitions, separate initial/revised responses,
-confidence, all component diagnostic flags and primary error, automatic/actual hint
+confidence, initial `visual_evidence_reason` and `judgement_source`, all component diagnostic flags and primary error, automatic/actual hint
 IDs, override flag, type, numeric level, exposure sequence, reflection text/category,
 researcher notes, and item start, initial submission, hint exposure, revision,
 reveal, reflection submission, and completion timestamps. `difficulty_code`,
@@ -290,6 +291,12 @@ Semantic analysis fields in JSON and CSV:
 Before the relevant submission, diagnostic fields are null. Each Group C revision
 may add a new authored exposure until the response is correct or Level 3 has been used.
 
+`visual_evidence_reason` and `judgement_source` are required only for the initial
+attempt. They are copied into `initial_attempt`, retained in the initial event, shown
+in researcher/debug output, and exported as the separate CSV columns
+`initial_visual_evidence_reason` and `initial_judgement_source`. Revisions neither
+require nor overwrite them. The deterministic classifier does not read either field.
+
 Participant API: `GET /api/items`, `GET /api/items/{item_id}`,
 `POST /api/sessions`, `GET /api/sessions/{session_id}`, and session actions
 `initial-observation`, `reobserve`, `revision`, `reveal`, `reflection-stage`,
@@ -299,7 +306,9 @@ and POST session actions `hint-override`, `researcher-notes`, `reset`.
 All POST actions use JSON bodies. The HTTP boundary serializes access to the shared
 in-memory runtime, and invalid submissions/transitions leave state and events intact.
 
-Sessions remain in memory; server restart retains exported files but does not
+Every new item/session receives a UUID, so consecutive participants and linked items
+write distinct JSON filenames rather than overwriting earlier sessions. Sessions
+remain in memory; server restart retains exported files but does not
 restore or resume live sessions. There is no database, full Group B yoking,
 counterbalancing, randomization, cross-item fading, LLM scoring/hints, delayed transfer
 study, or statistical analysis. Validate content and calibrate region overlap before

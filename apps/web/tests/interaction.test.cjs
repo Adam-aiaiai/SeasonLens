@@ -67,15 +67,23 @@ function fixture(debug = true) {
 
 const pointer = (clientX, clientY) => ({ clientX, clientY, button: 0, isPrimary: true, pointerId: 1, preventDefault() {} });
 
-test("formative introduction explains the task and requires an anonymous code", () => {
+test("participant document declares Simplified Chinese", () => {
+  const html = readFileSync(join(__dirname, "../index.html"), "utf8");
+  assert.match(html, /<html lang="zh-CN">/);
+  assert.match(html, /生态观察研究/);
+  assert.match(html, /研究进度/);
+});
+
+test("Chinese formative introduction explains the task and requires an anonymous code", () => {
   const f = fixture(false);
   f.run("showIntroduction()");
-  assert.match(f.node("#app").innerHTML, /SeasonLens Observation Study/);
-  assert.match(f.node("#app").innerHTML, /best contains the visual evidence supporting your judgement/);
-  assert.match(f.node("#app").innerHTML, /Describe only what you can directly see/);
+  assert.match(f.node("#app").innerHTML, /SeasonLens 植物观察研究/);
+  assert.match(f.node("#app").innerHTML, /最能支持你判断的证据区域/);
+  assert.match(f.node("#app").innerHTML, /只描述你能从图片中直接看到的特征/);
+  assert.match(f.node("#app").innerHTML, /评估的是系统设计，而不是你的个人能力/);
   f.node("#participant-id").value = " ";
   f.node("#session-start-form").listeners.submit({ preventDefault() {} });
-  assert.match(f.node("#status").textContent, /anonymous participant code/);
+  assert.match(f.node("#status").textContent, /匿名参与者编号/);
   assert.equal(f.requests.length, 0);
 });
 
@@ -100,7 +108,7 @@ test("drag in either direction creates a normalized visible rectangle; redraw an
   shell.listeners.pointerdown(pointer(200, 200));
   shell.listeners.pointerup(pointer(200, 200));
   assert.equal(f.run("selectedRegion.width"), 1);
-  assert.match(f.node("#status").textContent, /Drag to draw/);
+  assert.match(f.node("#status").textContent, /拖动绘制/);
 });
 
 test("initial validation prevents empty region and whitespace responses", async () => {
@@ -109,28 +117,50 @@ test("initial validation prevents empty region and whitespace responses", async 
   const form = f.node("#observation-form");
   const submit = () => form.listeners.submit({ preventDefault() {}, currentTarget: form });
   await submit();
-  assert.match(f.node("#status").textContent, /select a rectangle/);
+  assert.match(f.node("#status").textContent, /选择一个矩形区域/);
   f.run("selectedRegion = {x: 0.1, y: 0.1, width: 0.2, height: 0.2}");
   f.node("#observation").value = " ";
   f.node('input[name="stage"]:checked').value = "flower_buds_present";
   await submit();
-  assert.match(f.node("#status").textContent, /visible features/);
+  assert.match(f.node("#status").textContent, /可见的特征/);
   assert.equal(f.requests.length, 0);
+});
+
+test("initial evidence reasoning and judgement source are required and preserved in the draft", async () => {
+  const f = fixture();
+  f.run("bindObservationForm(false)");
+  f.run("selectedRegion = {x: 0.1, y: 0.1, width: 0.2, height: 0.2}");
+  f.node("#observation").value = "圆形结构仍然闭合";
+  f.node('input[name="stage"]:checked').value = "flower_buds_present";
+  const form = f.node("#observation-form");
+  const submit = () => form.listeners.submit({ preventDefault() {}, currentTarget: form });
+  await submit();
+  assert.match(f.node("#status").textContent, /阶段判断的理由/);
+  f.node("#visual-evidence-reason").value = "我看到茎尖有闭合的圆形花蕾";
+  await submit();
+  assert.match(f.node("#status").textContent, /判断主要依据/);
+  f.node('input[name="judgement-source"]:checked').value = "image_evidence";
+  await submit();
+  assert.equal(f.run("commitDraft.visual_evidence_reason"), "我看到茎尖有闭合的圆形花蕾");
+  assert.equal(f.run("commitDraft.judgement_source"), "image_evidence");
 });
 
 test("commit review shows stage 2 and keeps the editable draft without internal coordinates", () => {
   const f = fixture();
   f.run(`selectedRegion = {x: 0.1, y: 0.1, width: 0.2, height: 0.2};
-    renderCommit({ selected_region: selectedRegion, observation_text: "A branch", selected_stage_id: "flower_buds_present", interpretation_text: "Flower buds present", confidence: 3 });`);
+    renderCommit({ selected_region: selectedRegion, observation_text: "A branch", selected_stage_id: "flower_buds_present", interpretation_text: "Flower buds present", visual_evidence_reason: "A rounded tip is visible", judgement_source: "image_evidence", confidence: 3 });`);
   assert.equal(f.progress[1].attributes["aria-current"], "step");
   assert.match(f.node("#app").innerHTML, /selection-region/);
-  assert.doesNotMatch(f.node("#app").innerHTML, /Selected region|&quot;x&quot;/);
+  assert.doesNotMatch(f.node("#app").innerHTML, /选择区域|&quot;x&quot;/);
+  assert.match(f.node("#app").innerHTML, /A rounded tip is visible/);
   f.node("#edit-initial").listeners.click();
   assert.equal(f.progress[0].attributes["aria-current"], "step");
   assert.match(f.node("#app").innerHTML, /A branch/);
   assert.equal(f.run("selectedRegion.width"), 0.2);
   assert.equal(f.run("commitDraft.observation_text"), "A branch");
   assert.equal(f.run("commitDraft.selected_stage_id"), "flower_buds_present");
+  assert.equal(f.run("commitDraft.visual_evidence_reason"), "A rounded tip is visible");
+  assert.equal(f.run("commitDraft.judgement_source"), "image_evidence");
 });
 
 test("initial and revised forms render bounded vertical stage choices", () => {
@@ -138,12 +168,15 @@ test("initial and revised forms render bounded vertical stage choices", () => {
   const initial = f.run("observationForm(false)");
   assert.match(initial, /name="stage"/);
   assert.match(initial, /value="flower_buds_present"/);
-  assert.match(initial, /Describe visible features only\. Do not choose the plant stage here\./);
+  assert.match(initial, /这里只描述图片中可见的特征/);
+  assert.match(initial, /为什么你认为植物处于刚才选择的阶段/);
+  assert.match(initial, /name="judgement-source"/);
   assert.doesNotMatch(initial, /id="interpretation"/);
   f.run(`projection.data.initial_attempt = {observation_text: "swollen bud", selected_stage_id: "flower_buds_present", interpretation_text: "Flower buds present", confidence: 4}`);
   const revised = f.run("observationForm(true)");
   assert.match(revised, /value="flower_buds_present" checked/);
-  assert.match(revised, /Submit revised observation/);
+  assert.match(revised, /提交修改后的观察/);
+  assert.doesNotMatch(revised, /name="judgement-source"|visual-evidence-reason/);
 });
 
 test("saving a researcher note preserves unfinished participant fields and rectangle", async () => {
@@ -174,7 +207,7 @@ test("fully correct feedback is rendered without a hint level", () => {
     projection.data.hint = null;
     projection.data.positive_feedback = {text: "Good. Evidence matches the stage.", shown_at: "2026-09-22T00:00:00Z"};
     render();`);
-  assert.match(f.node("#app").innerHTML, /Positive feedback/);
+  assert.match(f.node("#app").innerHTML, /积极反馈/);
   assert.match(f.node("#app").innerHTML, /Good\. Evidence matches the stage\./);
   assert.doesNotMatch(f.node("#app").innerHTML, /Re-observe/);
   assert.doesNotMatch(f.node("#app").innerHTML, /hint-level|Level 1/);
@@ -189,10 +222,10 @@ test("reflection wording follows whether guidance was received", () => {
     projection.data.expert_reveal = {target_region: {x: 0.1, y: 0.1, width: 0.2, height: 0.2}, relevant_region: "upper bud", diagnostic_cue: "closed bud", interpretation: "Flower buds present"};
     projection.data.hint_received = false;
     render();`);
-  assert.match(f.node("#app").innerHTML, /What visual evidence was most important for your decision\?/);
-  assert.doesNotMatch(f.node("#app").innerHTML, /after seeing the hint/);
+  assert.match(f.node("#app").innerHTML, /哪些视觉证据对你的判断最重要/);
+  assert.doesNotMatch(f.node("#app").innerHTML, /看到提示后/);
   f.run("projection.data.hint_received = true; render();");
-  assert.match(f.node("#app").innerHTML, /What did you notice after seeing the hint\?/);
+  assert.match(f.node("#app").innerHTML, /看到提示后，你注意到了什么/);
 });
 
 const authoredRegions = {

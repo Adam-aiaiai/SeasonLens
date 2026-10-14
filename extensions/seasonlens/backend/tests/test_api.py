@@ -71,7 +71,9 @@ class ApiTests(unittest.TestCase):
         session_id = self.create()
         base = f"/api/sessions/{session_id}"
         initial = {"selected_region": {"x": 0.31, "y": 0.07, "width": 0.11, "height": 0.2},
-                   "observation_text": "a green shape", "selected_stage_id": "flower_buds_present", "confidence": 3}
+                   "observation_text": "a green shape", "selected_stage_id": "flower_buds_present",
+                   "visual_evidence_reason": "The shape appears near the stem tip.",
+                   "judgement_source": "image_evidence", "confidence": 3}
         self.assertEqual(self.request(base + "/initial-observation", initial)[0], 200)
         self.assertEqual(self.request(base + "/hint-override", {"hint_id": "demo_anemone_feature_02"}, researcher=True)[0], 200)
         self.assertEqual(self.request(base + "/researcher-notes", {"researcher_notes": "Private note"}, researcher=True)[0], 200)
@@ -85,11 +87,15 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(log["automatic_hint_id"], "demo_anemone_feature_01")
         self.assertEqual(log["actual_hint_id"], "demo_anemone_feature_02")
         self.assertEqual(log["researcher_notes"], "Private note")
+        self.assertEqual(log["initial_visual_evidence_reason"], "The shape appears near the stem tip.")
+        self.assertEqual(log["initial_judgement_source"], "image_evidence")
         status, text, headers = self.request(base + "/log.csv", researcher=True)
         self.assertEqual(status, 200)
         self.assertIn("text/csv", headers["Content-Type"])
         self.assertIn("attachment", headers["Content-Disposition"])
         self.assertIn("Private note", text)
+        self.assertIn("initial_visual_evidence_reason", text)
+        self.assertIn("initial_judgement_source", text)
         status, text, _ = self.request(base + "/next-item", {})
         self.assertEqual(json.loads(text)["data"]["item"]["item_id"], "demo_solidago_001")
         saved = json.loads((Path(self.directory.name) / f"{session_id}.json").read_text(encoding="utf-8"))
@@ -108,7 +114,9 @@ class ApiTests(unittest.TestCase):
         base = f"/api/sessions/{self.create()}"
         item = self.api.SERVICE.catalog.get("demo_anemone_001")
         payload = {"selected_region": item["distractor_regions"][0]["rect"],
-                   "observation_text": "a leaf", "selected_stage_id": "fruiting", "confidence": 2}
+                   "observation_text": "a leaf", "selected_stage_id": "fruiting",
+                   "visual_evidence_reason": "I mostly noticed a leaf.",
+                   "judgement_source": "guessing", "confidence": 2}
         status, text, _ = self.request(base + "/initial-observation", payload)
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(text)["data"]["hint"]["hint_id"], "demo_anemone_large_leaf_01")

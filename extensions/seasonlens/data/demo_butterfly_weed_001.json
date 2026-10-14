@@ -1,9 +1,9 @@
 {
   "item_id": "demo_butterfly_weed_001",
-  "plant_name": "Butterfly weed (Asclepias tuberosa)",
+  "plant_name": "块根马利筋（Asclepias tuberosa）",
   "image_path": "/assets/real/butterfly_weed_001.jpg",
-  "cue_family": "Flower",
-  "target_structure": "Upper orange flower cluster containing open flowers and unopened buds",
+  "cue_family": "花",
+  "target_structure": "植株上部同时含开放花朵和未开放花蕾的橙色花簇",
   "accepted_cue_keywords": [
     "open flowers and buds",
     "open flowers and unopened buds",
@@ -14,14 +14,18 @@
     "mixed flower cluster",
     "flowers and buds",
     "open blooms and buds",
-    "orange blossoms and buds"
+    "orange blossoms and buds",
+    "开放的花和花蕾",
+    "橙色花朵和花蕾",
+    "未开放的花蕾",
+    "开放的橙色花"
   ],
   "stage_options": [
-    {"id": "flower_buds_only", "label": "Only flower buds are present"},
-    {"id": "active_flowering_with_unopened_buds", "label": "Active flowering with some unopened buds"},
-    {"id": "flowering_finished", "label": "Flowering has completely finished"},
-    {"id": "fruiting", "label": "Fruiting"},
-    {"id": "not_sure", "label": "Not sure"}
+    {"id": "flower_buds_only", "label": "只有花蕾"},
+    {"id": "active_flowering_with_unopened_buds", "label": "正在开花，仍有部分花蕾未开放"},
+    {"id": "flowering_finished", "label": "开花已经完全结束"},
+    {"id": "fruiting", "label": "结果期"},
+    {"id": "not_sure", "label": "不确定"}
   ],
   "correct_stage_id": "active_flowering_with_unopened_buds",
   "accepted_interpretation_keywords": [
@@ -32,31 +36,31 @@
     "active flowering",
     "still flowering"
   ],
-  "expert_cue": "The upper cluster contains both open orange flowers and rounded unopened buds.",
-  "expert_interpretation": "The mixture indicates active flowering that is still continuing as additional buds remain unopened.",
-  "correct_feedback": "Good. You used both the open flowers and unopened buds to support the stage judgement.",
+  "expert_cue": "上部花簇中既有开放的橙色花朵，也有圆形的未开放花蕾。",
+  "expert_interpretation": "这种组合表明植物正在开花，而且由于仍有花蕾未开放，开花过程还会继续。",
+  "correct_feedback": "很好。你同时利用了开放花朵和未开放花蕾来支持阶段判断。",
   "prompts": {
-    "observation": "Observation — Describe only what you can directly see in the selected region.",
-    "interpretation": "Which stage best describes the plant?"
+    "observation": "观察——只描述你在所选区域中能直接看到的内容。",
+    "interpretation": "哪个阶段最符合这株植物的状态？"
   },
   "hints": {
     "REGION_MISS": [
       {
         "id": "demo_butterfly_weed_region_01",
         "level": 1,
-        "text": "Look again at the upper part of the plant.",
+        "text": "请再看看植物的上部。",
         "type": "attention_directing"
       },
       {
         "id": "demo_butterfly_weed_region_02",
         "level": 2,
-        "text": "Focus on the orange flower cluster near the top.",
+        "text": "请关注顶部附近的橙色花簇。",
         "type": "region_directing"
       },
       {
         "id": "demo_butterfly_weed_region_03",
         "level": 3,
-        "text": "Check the cluster that contains both open flowers and rounded closed structures.",
+        "text": "请查看同时包含开放花朵和圆形闭合结构的花簇。",
         "type": "feature_directing"
       }
     ],
@@ -64,19 +68,19 @@
       {
         "id": "demo_butterfly_weed_feature_01",
         "level": 1,
-        "text": "Look closely at the different structures within the same flower cluster.",
+        "text": "请仔细观察同一花簇中的不同结构。",
         "type": "attention_directing"
       },
       {
         "id": "demo_butterfly_weed_feature_02",
         "level": 2,
-        "text": "Notice whether all of the structures look the same.",
+        "text": "注意这些结构是否看起来都一样。",
         "type": "feature_directing"
       },
       {
         "id": "demo_butterfly_weed_feature_03",
         "level": 3,
-        "text": "Compare the open orange flowers with the rounded unopened buds in the same cluster.",
+        "text": "比较同一花簇中开放的橙色花朵和圆形的未开放花蕾。",
         "type": "feature_directing"
       }
     ],
@@ -84,19 +88,19 @@
       {
         "id": "demo_butterfly_weed_stage_01",
         "level": 1,
-        "text": "Base your stage choice on the combination of visible structures in the cluster.",
+        "text": "请根据花簇中可见结构的组合选择阶段。",
         "type": "interpretation_prompt"
       },
       {
         "id": "demo_butterfly_weed_stage_02",
         "level": 2,
-        "text": "Consider whether the plant shows only buds, only finished flowers, or active flowering with some buds still unopened.",
+        "text": "考虑植株是只有花蕾、开花已经结束，还是正在开花且仍有部分花蕾未开放。",
         "type": "interpretation_directing"
       },
       {
         "id": "demo_butterfly_weed_stage_03",
         "level": 3,
-        "text": "Use the coexistence of open flowers and unopened buds as the deciding evidence for the stage.",
+        "text": "请以开放花朵和未开放花蕾同时存在作为判断阶段的关键证据。",
         "type": "interpretation_directing"
       }
     ],
@@ -104,7 +108,7 @@
       {
         "id": "demo_butterfly_weed_correct_01",
         "level": 1,
-        "text": "Good. You used both the open flowers and unopened buds to support the stage judgement.",
+        "text": "很好。你同时利用了开放花朵和未开放花蕾来支持阶段判断。",
         "type": "evidence_checking"
       }
     ]
@@ -159,7 +163,7 @@
         "id": "demo_butterfly_weed_leaf_01",
         "level": 1,
         "type": "contrastive_attention",
-        "text": "You are focusing on leaves. Look higher at the orange reproductive structures."
+        "text": "你目前关注的是叶片。请向上查看橙色的生殖结构。"
       }
     ],
     "lower_stem": [
@@ -167,7 +171,7 @@
         "id": "demo_butterfly_weed_lower_stem_01",
         "level": 1,
         "type": "spatial_redirect",
-        "text": "You are focusing on the lower stem. Follow it upward toward the flower cluster."
+        "text": "你目前关注的是下部茎。请沿茎向上查看花簇。"
       }
     ],
     "background_vegetation": [
@@ -175,7 +179,7 @@
         "id": "demo_butterfly_weed_background_01",
         "level": 1,
         "type": "spatial_redirect",
-        "text": "You are focusing on surrounding vegetation. Return to the main flowering plant."
+        "text": "你目前关注的是周围植被。请回到主要的开花植株。"
       }
     ]
   }

@@ -98,8 +98,9 @@ class DomainTests(unittest.TestCase):
             "selected_stage_id": "flowering",
         }), DifficultyCode.CORRECT)
         self.assertEqual([item["cue_family"] for item in catalog.list_items()], [
-            "Flower bud", "Flower", "Flower",
+            "花蕾", "花", "花",
         ])
+        self.assertEqual(catalog.list_items()[0]["stage_options"][1]["label"], "已有花蕾")
         for item in catalog.list_items():
             self.assertTrue(item["stage_options"])
             self.assertNotIn("hints", item)

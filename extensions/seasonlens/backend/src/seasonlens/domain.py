@@ -31,6 +31,9 @@ EXTENSION_ID = "seasonlens"
 CONDITION = "observation-first-contingent"
 ANSWER_FIRST = "answer-first"
 YOKED_NON_CONTINGENT = "observation-first-yoked"
+JUDGEMENT_SOURCES = frozenset({
+    "image_evidence", "prior_experience", "learned_knowledge", "guessing", "other",
+})
 
 
 class DifficultyCode(StrEnum):
@@ -204,7 +207,7 @@ class SelectAllowedHintTool:
                 "hint": None,
                 "positive_feedback": {"text": item.get(
                     "correct_feedback",
-                    "Correct. Your selected region, observation, and stage judgement are consistent with the expert answer.",
+                    "正确。你选择的区域、观察描述和阶段判断与专家答案一致。",
                 )},
                 "region_hint_source": None,
                 "region_hint_id": None,
@@ -322,6 +325,15 @@ class SeasonLensExtension:
         payload = dict(proposal.payload)
         if proposal.action_type == "RECORD_INITIAL_OBSERVATION":
             self._validate_observation(payload, include_confidence=True)
+            _require(
+                isinstance(payload.get("visual_evidence_reason"), str)
+                and bool(payload["visual_evidence_reason"].strip()),
+                "Evidence reasoning is required for the initial attempt.",
+            )
+            _require(
+                payload.get("judgement_source") in JUDGEMENT_SOURCES,
+                "Choose a valid judgement source for the initial attempt.",
+            )
             _require(state.data["initial_attempt"] is None, "Initial attempt is immutable.")
         elif proposal.action_type == "CLASSIFY_DIFFICULTY":
             _require(state.data["initial_attempt"] is not None, "Initial attempt is missing.")

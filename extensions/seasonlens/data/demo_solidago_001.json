@@ -1,9 +1,9 @@
 {
   "item_id": "demo_solidago_001",
-  "plant_name": "Canada goldenrod (Solidago canadensis)",
+  "plant_name": "加拿大一枝黄花（Solidago canadensis）",
   "image_path": "/assets/real/solidago_canadensis_001.jpg",
-  "cue_family": "Flower",
-  "target_structure": "Upper flowering region with yellow inflorescences",
+  "cue_family": "花",
+  "target_structure": "植株上部带有黄色花序的开花区域",
   "accepted_cue_keywords": [
     "yellow flower clusters",
     "yellow flowers",
@@ -14,14 +14,18 @@
     "flowers near the top",
     "flowers at the top",
     "yellow blossoms",
-    "open blooms"
+    "open blooms",
+    "黄色花簇",
+    "黄色花朵",
+    "开放的黄色花",
+    "顶部的花"
   ],
   "stage_options": [
-    {"id": "vegetative_growth", "label": "Vegetative growth"},
-    {"id": "flower_buds_developing", "label": "Flower buds developing"},
-    {"id": "flowering", "label": "Flowering"},
-    {"id": "fruiting", "label": "Fruiting"},
-    {"id": "not_sure", "label": "Not sure"}
+    {"id": "vegetative_growth", "label": "营养生长期"},
+    {"id": "flower_buds_developing", "label": "花蕾发育期"},
+    {"id": "flowering", "label": "开花期"},
+    {"id": "fruiting", "label": "结果期"},
+    {"id": "not_sure", "label": "不确定"}
   ],
   "correct_stage_id": "flowering",
   "accepted_interpretation_keywords": [
@@ -31,31 +35,31 @@
     "blooming",
     "bloom"
   ],
-  "expert_cue": "The upper part of the plant contains clusters of open yellow flowers.",
-  "expert_interpretation": "The visible open flowers indicate the flowering stage.",
-  "correct_feedback": "Good. The upper flowering structures provide evidence consistent with your stage choice.",
+  "expert_cue": "植株上部有成簇开放的黄色花朵。",
+  "expert_interpretation": "可见的开放花朵表明植物处于开花期。",
+  "correct_feedback": "很好。上部的开花结构提供了与你所选阶段一致的证据。",
   "prompts": {
-    "observation": "Observation — Describe only what you can directly see in the selected region.",
-    "interpretation": "Which stage best describes the plant?"
+    "observation": "观察——只描述你在所选区域中能直接看到的内容。",
+    "interpretation": "哪个阶段最符合这株植物的状态？"
   },
   "hints": {
     "REGION_MISS": [
       {
         "id": "demo_solidago_region_01",
         "level": 1,
-        "text": "Look again at the upper part of the plant.",
+        "text": "请再看看植物的上部。",
         "type": "attention_directing"
       },
       {
         "id": "demo_solidago_region_02",
         "level": 2,
-        "text": "Focus on the branching structures near the top.",
+        "text": "请关注顶部附近的分枝结构。",
         "type": "region_directing"
       },
       {
         "id": "demo_solidago_region_03",
         "level": 3,
-        "text": "Check the clustered structures extending from the upper stems.",
+        "text": "请查看从上部茎伸出的簇状结构。",
         "type": "feature_directing"
       }
     ],
@@ -63,19 +67,19 @@
       {
         "id": "demo_solidago_feature_01",
         "level": 1,
-        "text": "Look closely at the structures grouped near the top of the plant.",
+        "text": "请仔细观察植株顶部附近聚集的结构。",
         "type": "attention_directing"
       },
       {
         "id": "demo_solidago_feature_02",
         "level": 2,
-        "text": "Notice their colour and whether individual flower structures are visible.",
+        "text": "注意它们的颜色，以及是否能看见单个花朵结构。",
         "type": "feature_directing"
       },
       {
         "id": "demo_solidago_feature_03",
         "level": 3,
-        "text": "Check whether the clusters contain open yellow flowers rather than only closed buds.",
+        "text": "检查这些花簇中是否有开放的黄色花朵，而不只是闭合的花蕾。",
         "type": "feature_directing"
       }
     ],
@@ -83,19 +87,19 @@
       {
         "id": "demo_solidago_stage_01",
         "level": 1,
-        "text": "Use the visible flower structures to guide your stage choice.",
+        "text": "请根据可见的花部结构选择阶段。",
         "type": "interpretation_prompt"
       },
       {
         "id": "demo_solidago_stage_02",
         "level": 2,
-        "text": "Compare whether the upper clusters are still developing or already open.",
+        "text": "比较上部花簇仍在发育，还是已经开放。",
         "type": "interpretation_directing"
       },
       {
         "id": "demo_solidago_stage_03",
         "level": 3,
-        "text": "Use the presence of clearly open yellow flowers as the deciding evidence for the stage.",
+        "text": "请以明显开放的黄色花朵作为判断阶段的关键证据。",
         "type": "interpretation_directing"
       }
     ],
@@ -103,7 +107,7 @@
       {
         "id": "demo_solidago_correct_01",
         "level": 1,
-        "text": "Good. The upper flowering structures provide evidence consistent with your stage choice.",
+        "text": "很好。上部的开花结构提供了与你所选阶段一致的证据。",
         "type": "evidence_checking"
       }
     ]
@@ -158,7 +162,7 @@
         "id": "demo_solidago_middle_leaves_01",
         "level": 1,
         "type": "contrastive_attention",
-        "text": "You are focusing on leaves. Look toward the upper flowering structures."
+        "text": "你目前关注的是叶片。请查看上部的开花结构。"
       }
     ],
     "lower_stem": [
@@ -166,7 +170,7 @@
         "id": "demo_solidago_lower_stem_01",
         "level": 1,
         "type": "spatial_redirect",
-        "text": "You are focusing too low on the plant. Follow the stem upward toward the branching top."
+        "text": "你关注的位置太低。请沿茎向上查看分枝的顶部。"
       }
     ],
     "background_vegetation": [
@@ -174,7 +178,7 @@
         "id": "demo_solidago_background_01",
         "level": 1,
         "type": "spatial_redirect",
-        "text": "You are focusing on surrounding vegetation. Return to the tall foreground plant."
+        "text": "你目前关注的是周围植被。请回到前景中较高的植株。"
       }
     ]
   }

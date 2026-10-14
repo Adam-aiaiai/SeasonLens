@@ -38,7 +38,7 @@ h2 { font: 700 clamp(1.35rem, 3vw, 1.8rem)/1.2 Georgia, serif; }
 .image-shell { position: relative; overflow: hidden; border: 1px solid #c9d3ca; border-radius: 10px; background: #dfe9dc; cursor: crosshair; }
 .image-shell.locked { cursor: default; }
 .image-shell[data-interactive="true"] { touch-action: none; }
-.plant-image { display: block; width: 100%; height: auto; user-select: none; }
+.plant-image { display: block; width: 100%; height: auto; object-fit: contain; object-position: center; user-select: none; }
 .selection-region { position: absolute; border: 2px solid #9b5200; background: #efb45035; box-shadow: 0 0 0 1px white; pointer-events: none; }
 .expert-region { position: absolute; border: 3px solid #ffd14a; border-radius: 8px; background: #ffe6812b; box-shadow: 0 0 0 1px #5c4600; pointer-events: none; }
 .distractor-region { position: absolute; border: 2px dashed #7162a8; background: #7162a815; pointer-events: none; }
@@ -52,6 +52,7 @@ textarea:focus, input:focus, button:focus-visible { outline: 3px solid #f0b45f; 
 .field-help { margin: 7px 0 0; color: var(--muted); font-size: .84rem; }
 fieldset { margin: 0 0 20px; padding: 0; border: 0; }
 .stage-options { display: grid; gap: 9px; }
+.source-field { margin-top: 4px; }
 .stage-option { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 11px 12px; border: 1px solid #aebbb1; border-radius: 7px; background: #fff; cursor: pointer; }
 .stage-option:has(input:checked) { border-color: var(--leaf); background: #e8f6ed; box-shadow: 0 0 0 1px var(--leaf); }
 .stage-option input { flex: 0 0 auto; margin-top: .2em; accent-color: var(--leaf); }

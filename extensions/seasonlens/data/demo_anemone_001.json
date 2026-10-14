@@ -1,9 +1,9 @@
 {
   "item_id": "demo_anemone_001",
-  "plant_name": "Virginia anemone (Anemone virginiana)",
+  "plant_name": "弗吉尼亚银莲花（Anemone virginiana）",
   "image_path": "/assets/real/anemone_virginiana_001.jpg",
-  "cue_family": "Flower bud",
-  "target_structure": "Prominent closed flower bud above the leaves",
+  "cue_family": "花蕾",
+  "target_structure": "叶片上方显眼的闭合花蕾",
   "accepted_cue_keywords": [
     "rounded bud",
     "rounded buds",
@@ -15,14 +15,18 @@
     "unopened buds",
     "swollen bud",
     "swollen buds",
-    "petals not open"
+    "petals not open",
+    "圆形花蕾",
+    "闭合花蕾",
+    "未开放的花蕾",
+    "花瓣没有打开"
   ],
   "stage_options": [
-    {"id": "no_reproductive_structures", "label": "No visible reproductive structures"},
-    {"id": "flower_buds_present", "label": "Flower buds present"},
-    {"id": "open_flowering", "label": "Open flowering"},
-    {"id": "fruiting", "label": "Fruiting"},
-    {"id": "not_sure", "label": "Not sure"}
+    {"id": "no_reproductive_structures", "label": "未见生殖结构"},
+    {"id": "flower_buds_present", "label": "已有花蕾"},
+    {"id": "open_flowering", "label": "花朵开放"},
+    {"id": "fruiting", "label": "结果期"},
+    {"id": "not_sure", "label": "不确定"}
   ],
   "correct_stage_id": "flower_buds_present",
   "accepted_interpretation_keywords": [
@@ -32,31 +36,31 @@
     "bud stage",
     "flower buds"
   ],
-  "expert_cue": "Several rounded flower buds are visible above the leaves, and their petals have not opened.",
-  "expert_interpretation": "The closed rounded structures indicate that flower buds are present.",
-  "correct_feedback": "Good. The visible evidence you selected is consistent with the current stage.",
+  "expert_cue": "叶片上方可见几个圆形花蕾，花瓣尚未开放。",
+  "expert_interpretation": "这些闭合的圆形结构表明植物已有花蕾。",
+  "correct_feedback": "很好。你选择的可见证据与当前阶段一致。",
   "prompts": {
-    "observation": "Observation — Describe only what you can directly see in the selected region.",
-    "interpretation": "Which stage best describes the plant?"
+    "observation": "观察——只描述你在所选区域中能直接看到的内容。",
+    "interpretation": "哪个阶段最符合这株植物的状态？"
   },
   "hints": {
     "REGION_MISS": [
       {
         "id": "demo_anemone_region_01",
         "level": 1,
-        "text": "Look again at the upper part of the plant.",
+        "text": "请再看看植物的上部。",
         "type": "attention_directing"
       },
       {
         "id": "demo_anemone_region_02",
         "level": 2,
-        "text": "Focus on the ends of the upright stems.",
+        "text": "请关注直立茎的末端。",
         "type": "region_directing"
       },
       {
         "id": "demo_anemone_region_03",
         "level": 3,
-        "text": "Check the rounded structures located at the tips of those stems.",
+        "text": "请查看这些茎尖端的圆形结构。",
         "type": "feature_directing"
       }
     ],
@@ -64,19 +68,19 @@
       {
         "id": "demo_anemone_feature_01",
         "level": 1,
-        "text": "Look closely at the shape of the structures in your selected region.",
+        "text": "请仔细观察所选区域中结构的形状。",
         "type": "attention_directing"
       },
       {
         "id": "demo_anemone_feature_02",
         "level": 2,
-        "text": "Notice whether the structures are rounded and still enclosed.",
+        "text": "注意这些结构是否呈圆形并仍然闭合。",
         "type": "feature_directing"
       },
       {
         "id": "demo_anemone_feature_03",
         "level": 3,
-        "text": "Check whether petals are visible or whether the structures remain closed.",
+        "text": "检查是否能看到花瓣，或这些结构是否仍然闭合。",
         "type": "feature_directing"
       }
     ],
@@ -84,19 +88,19 @@
       {
         "id": "demo_anemone_stage_01",
         "level": 1,
-        "text": "Base your stage choice only on the visible reproductive structures.",
+        "text": "请只根据可见的生殖结构选择阶段。",
         "type": "interpretation_prompt"
       },
       {
         "id": "demo_anemone_stage_02",
         "level": 2,
-        "text": "Compare whether the structures are still closed or have visibly opened.",
+        "text": "比较这些结构仍然闭合还是已经明显开放。",
         "type": "interpretation_directing"
       },
       {
         "id": "demo_anemone_stage_03",
         "level": 3,
-        "text": "Use whether the petals are enclosed or expanded as the deciding evidence for the stage.",
+        "text": "请以花瓣是闭合还是展开作为判断阶段的关键证据。",
         "type": "interpretation_directing"
       }
     ],
@@ -104,7 +108,7 @@
       {
         "id": "demo_anemone_correct_01",
         "level": 1,
-        "text": "Good. The visible evidence you selected is consistent with the current stage.",
+        "text": "很好。你选择的可见证据与当前阶段一致。",
         "type": "evidence_checking"
       }
     ]
@@ -159,7 +163,7 @@
         "id": "demo_anemone_large_leaf_01",
         "level": 1,
         "type": "contrastive_attention",
-        "text": "You are focusing on leaves. Look higher on the plant for reproductive structures."
+        "text": "你目前关注的是叶片。请向植物更高处寻找生殖结构。"
       }
     ],
     "middle_stem": [
@@ -167,7 +171,7 @@
         "id": "demo_anemone_middle_stem_01",
         "level": 1,
         "type": "spatial_redirect",
-        "text": "You are focusing on the stem. Follow it upward and inspect the structure at its tip."
+        "text": "你目前关注的是茎。请沿茎向上，查看其顶端的结构。"
       }
     ],
     "background_vegetation": [
@@ -175,7 +179,7 @@
         "id": "demo_anemone_background_01",
         "level": 1,
         "type": "spatial_redirect",
-        "text": "You are focusing on background vegetation. Return to the main foreground plant."
+        "text": "你目前关注的是背景植被。请回到前景中的主要植物。"
       }
     ]
   }

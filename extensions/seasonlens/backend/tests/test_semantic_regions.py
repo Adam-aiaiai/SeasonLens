@@ -23,6 +23,8 @@ class SemanticFixture:
         return {"selected_region": deepcopy(rect), "observation_text": observation,
                 "interpretation_text": interpretation,
                 "selected_stage_id": "fruiting" if interpretation == "late summer" else "flower_buds_present",
+                "visual_evidence_reason": "The selected image features support this choice.",
+                "judgement_source": "image_evidence",
                 "confidence": 3}
 
     def decision(self, response):

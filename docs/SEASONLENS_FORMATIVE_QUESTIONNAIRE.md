@@ -9,9 +9,15 @@ For each item:
 1. Select the region that best contains the visual evidence supporting your judgement.
 2. Describe only what you can directly see in the selected region.
 3. Choose the stage that best describes the plant from the provided options.
-4. Record confidence from 1 (low) to 5 (high), review, and commit.
+4. Explain why the visible image evidence supports that stage.
+5. Select the main judgement source: image evidence, prior plant-observation
+   experience, learned knowledge, guessing, or other.
+6. Record confidence from 1 (low) to 5 (high), review, and commit.
 
-The observation response concerns visible evidence. The bounded stage choice records the participant's judgement separately.
+The observation response concerns visible evidence. The bounded stage choice records
+the participant's judgement separately. The required initial reasoning fields are
+stored as `visual_evidence_reason` and `judgement_source`; they are collected before
+the first commit and are not part of the post-reveal reflection.
 
 ## Path-specific reflection
 
@@ -21,6 +27,10 @@ The observation response concerns visible evidence. The bounded stage choice rec
 The guidance prompt is deliberately neutral: participants are not required to say that a hint helped.
 
 ## Post-task formative questions
+
+These questions form an **external post-task questionnaire**. They are study
+materials, not fields implemented in the SeasonLens website. The website implements
+only the in-flow, path-specific reflection above.
 
 Use a 1–5 agreement scale unless marked open response.
 

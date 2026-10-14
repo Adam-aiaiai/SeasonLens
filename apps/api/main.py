@@ -70,7 +70,7 @@ class SeasonLensHandler(BaseHTTPRequestHandler):
         except ValueError as error:
             self._error(HTTPStatus.NOT_FOUND, str(error))
         except Exception as error:  # pragma: no cover - protective HTTP boundary
-            self._error(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to load this step. Please try again.")
+            self._error(HTTPStatus.INTERNAL_SERVER_ERROR, "无法加载当前步骤，请重试。")
 
     def do_POST(self) -> None:  # noqa: N802
         # Serialize the existing in-memory runtime across threaded HTTP requests.
@@ -123,9 +123,9 @@ class SeasonLensHandler(BaseHTTPRequestHandler):
             self._error(HTTPStatus.BAD_REQUEST, "Request body must be valid JSON.")
         except (ValueError, TypeError) as error:
             self._error(HTTPStatus.CONFLICT, str(error) if self._researcher_mode() else
-                        "Please check your responses and complete the current step before continuing.")
+                        "请检查你的回答并完成当前步骤后再继续。")
         except Exception as error:  # pragma: no cover - protective HTTP boundary
-            self._error(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to save this step. Please try again.")
+            self._error(HTTPStatus.INTERNAL_SERVER_ERROR, "无法保存当前步骤，请重试。")
 
     def _researcher_mode(self) -> bool:
         # A local demonstration mode gate, not researcher authentication.

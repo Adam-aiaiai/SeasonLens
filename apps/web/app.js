@@ -39,7 +39,7 @@ async function api(path, options = {}) {
     headers: { "Content-Type": "application/json", ...(debugMode ? { "X-SeasonLens-Researcher": "1" } : {}), ...(options.headers || {}) },
   });
   const body = await response.json();
-  if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
+  if (!response.ok) throw new Error(body.error || `请求失败（${response.status}）`);
   return body;
 }
 
@@ -51,28 +51,29 @@ function showIntroduction() {
   document.querySelector(".progress").hidden = true;
   const remembered = localStorage.getItem("seasonlens-participant") || "F01";
   app.innerHTML = `<div class="introduction">
-    <p class="eyebrow">Formative study</p>
-    <h2>SeasonLens Observation Study</h2>
-    <p>This study is about how people observe visual changes in plants.</p>
-    <p>You do not need botanical expertise. We are testing the design of the system, not testing you.</p>
-    <p>If possible, please say what you are thinking while completing the task.</p>
+    <p class="eyebrow">形成性研究</p>
+    <h2>SeasonLens 植物观察研究</h2>
+    <p>本研究关注人们如何观察植物的视觉变化。</p>
+    <p>你不需要具备植物学知识。我们评估的是系统设计，而不是你的个人能力。</p>
+    <p>请描述你实际看到的内容；不确定时也可以如实表达。如果方便，请在完成任务时说出你的想法。</p>
+    <p>在观察优先条件下，系统不会在你首次判断前显示正确答案。</p>
     <dl class="instruction-definitions">
-      <dt>Region selection</dt><dd>Select the region that best contains the visual evidence supporting your judgement. You can redraw it before submitting.</dd>
-      <dt>Observation</dt><dd>Describe only what you can directly see.</dd>
-      <dt>Stage judgement</dt><dd>Choose one stage from the options provided.</dd>
+      <dt>选择区域</dt><dd>在图片中框选最能支持你判断的证据区域。提交前可以重新绘制矩形。</dd>
+      <dt>描述观察</dt><dd>只描述你能从图片中直接看到的特征。</dd>
+      <dt>阶段判断</dt><dd>选择一个阶段，说明判断理由及主要依据，再评定信心并提交。</dd>
     </dl>
     <form id="session-start-form" class="participant-code-form">
-      <label for="participant-id">Anonymous participant code</label>
-      <input id="participant-id" type="text" value="${escapeHtml(remembered)}" placeholder="For example, F01" autocomplete="off" required>
-      <p class="commit-note">Use the researcher-assigned code only; do not enter a name.</p>
-      <button type="submit">Start observation task</button>
+      <label for="participant-id">匿名参与者编号</label>
+      <input id="participant-id" type="text" value="${escapeHtml(remembered)}" placeholder="例如：F01" autocomplete="off" required>
+      <p class="commit-note">请只填写研究人员分配的编号，不要填写姓名。</p>
+      <button type="submit">开始观察任务</button>
     </form>
   </div>`;
   document.querySelector("#session-start-form").addEventListener("submit", event => {
     event.preventDefault();
     const participantId = document.querySelector("#participant-id").value.trim();
     if (!participantId) {
-      setStatus("Enter an anonymous participant code before starting.");
+      setStatus("开始前请输入匿名参与者编号。");
       document.querySelector("#participant-id").focus();
       return;
     }
@@ -101,7 +102,7 @@ async function startSession(participantId) {
   setStatus("");
   if (!participantId?.trim()) {
     showIntroduction();
-    setStatus("Enter an anonymous participant code before starting.");
+    setStatus("开始前请输入匿名参与者编号。");
     return;
   }
   localStorage.setItem("seasonlens-participant", participantId.trim());
@@ -139,7 +140,7 @@ function imagePanel({ interactive = false, expertRegion = null } = {}) {
   const item = projection.data.item;
   const point = selectedRegion;
   const marker = point
-    ? `<span class="selection-region" style="left:${point.x * 100}%;top:${point.y * 100}%;width:${point.width * 100}%;height:${point.height * 100}%" aria-label="Your selected region"></span>`
+    ? `<span class="selection-region" style="left:${point.x * 100}%;top:${point.y * 100}%;width:${point.width * 100}%;height:${point.height * 100}%" aria-label="你选择的区域"></span>`
     : "";
   const region = expertRegion
     ? `<span class="expert-region" style="left:${expertRegion.x * 100}%;top:${expertRegion.y * 100}%;width:${expertRegion.width * 100}%;height:${expertRegion.height * 100}%"></span>`
@@ -147,10 +148,10 @@ function imagePanel({ interactive = false, expertRegion = null } = {}) {
   return `
     <div class="visual-panel">
       <div id="image-shell" class="image-shell ${interactive ? "" : "locked"}" data-interactive="${interactive}">
-        <img class="plant-image" src="${escapeHtml(item.image_path)}" alt="${escapeHtml(item.plant_name)} plant photograph for observation" draggable="false">
+        <img class="plant-image" src="${escapeHtml(item.image_path)}" alt="用于观察的${escapeHtml(item.plant_name)}照片" draggable="false">
         ${marker}${region}
       </div>
-       <p class="image-caption">${interactive ? "Select the region that best contains the visual evidence supporting your judgement. Drag again to redraw it before committing." : escapeHtml(item.plant_name) + " · plant observation photograph"}</p>
+       <p class="image-caption">${interactive ? "请选择最能包含支持你判断的视觉证据的区域。提交前可以再次拖动，重新绘制矩形。" : escapeHtml(item.plant_name) + " · 植物观察照片"}</p>
     </div>`;
 }
 
@@ -177,39 +178,57 @@ function observationForm(isRevision) {
   const observation = isRevision ? latest.observation_text : (commitDraft?.observation_text || "");
   const interpretation = isRevision ? latest.interpretation_text : (commitDraft?.interpretation_text || "");
   const selectedStageId = isRevision ? latest.selected_stage_id : (commitDraft?.selected_stage_id || null);
+  const visualEvidenceReason = isRevision ? "" : (commitDraft?.visual_evidence_reason || "");
+  const judgementSource = isRevision ? null : (commitDraft?.judgement_source || null);
   const confidence = commitDraft?.confidence || initial?.confidence || 3;
   const unaided = projection.data.study_mode !== "training";
   const answerFirst = !isRevision && projection.data.condition === "answer-first" && projection.data.expert_reveal;
   return `
     <form id="observation-form" class="form-panel">
-      <p class="eyebrow">${isRevision ? (unaided ? "Final unaided response" : "Re-observe") : "Observe"}</p>
-      <h2>${isRevision ? "Submit your final observation" : "What do you see?"}</h2>
-      <p>${isRevision ? (unaided ? "Make a final independent response without guidance or an expert reveal." : "Inspect the image again using the guidance, then make a separate revised submission.") : "Select a region and commit your own observation."}</p>
-      ${answerFirst ? `<div class="answer-first-panel"><strong>Answer-first expert reference</strong><p>Region: ${escapeHtml(projection.data.expert_reveal.relevant_region)}<br>Cue: ${escapeHtml(projection.data.expert_reveal.diagnostic_cue)}<br>Interpretation: ${escapeHtml(projection.data.expert_reveal.interpretation)}</p></div>` : ""}
+      <p class="eyebrow">${isRevision ? (unaided ? "最终独立作答" : "再次观察") : "观察"}</p>
+      <h2>${isRevision ? "提交你的最终观察" : "你看到了什么？"}</h2>
+      <p>${isRevision ? (unaided ? "请在没有提示或专家答案的情况下独立完成最终作答。" : "请结合提示再次查看图片，并另行提交修改后的回答。") : "请框选一个区域，描述所见并作出自己的判断。"}</p>
+      ${answerFirst ? `<div class="answer-first-panel"><strong>答案优先：专家参考</strong><p>相关区域：${escapeHtml(projection.data.expert_reveal.relevant_region)}<br>诊断特征：${escapeHtml(projection.data.expert_reveal.diagnostic_cue)}<br>解释：${escapeHtml(projection.data.expert_reveal.interpretation)}</p></div>` : ""}
       <div class="field">
         <label for="observation">${escapeHtml(projection.data.item.prompts.observation)}</label>
         <textarea id="observation" required>${escapeHtml(observation)}</textarea>
-        <p class="field-help">Describe visible features only. Do not choose the plant stage here.</p>
+        <p class="field-help">这里只描述图片中可见的特征，不要在这里填写植物阶段。</p>
       </div>
       ${stageChoiceField(selectedStageId, interpretation)}
+      ${isRevision ? "" : `<div class="field">
+        <label for="visual-evidence-reason">为什么你认为植物处于刚才选择的阶段？</label>
+        <textarea id="visual-evidence-reason" required>${escapeHtml(visualEvidenceReason)}</textarea>
+        <p class="field-help">请结合图片中的具体特征说明原因。如果不确定，也可以如实描述。</p>
+      </div>
+      <fieldset class="source-field"><legend>你的判断主要依据是什么？</legend>
+        <div class="stage-options">${[
+          ["image_evidence", "图片中直接看到的特征"],
+          ["prior_experience", "以前观察植物的经验"],
+          ["learned_knowledge", "课堂或书本中学过的知识"],
+          ["guessing", "主要依靠猜测"],
+          ["other", "其他"],
+        ].map(([value, label], index) => `<label class="stage-option"><input type="radio" name="judgement-source" value="${value}" ${value === judgementSource ? "checked" : ""} ${index === 0 ? "required" : ""}><span>${label}</span></label>`).join("")}</div>
+      </fieldset>`}
       ${isRevision ? "" : confidenceField(confidence)}
-      <button type="submit">${isRevision ? "Submit revised observation" : "Review and commit"}</button>
-      ${isRevision ? '<p class="commit-note">Your initial attempt remains unchanged in the study log.</p>' : ""}
+      <button type="submit">${isRevision ? "提交修改后的观察" : "检查后提交"}</button>
+      ${isRevision ? '<p class="commit-note">你的首次回答会在研究日志中保持不变。</p>' : ""}
     </form>`;
 }
 
 function confidenceField(selected) {
-  return `<fieldset><legend>Confidence · 1–5</legend><div class="confidence">${[1, 2, 3, 4, 5].map((value) =>
+  return `<fieldset><legend>信心程度 · 1（最低）–5（最高）</legend><div class="confidence">${[1, 2, 3, 4, 5].map((value) =>
     `<label><input type="radio" name="confidence" value="${value}" ${value === selected ? "checked" : ""}><span>${value}</span></label>`
   ).join("")}</div></fieldset>`;
 }
 
 function attemptSummary(attempt, title, showRegion = false) {
   return `<div class="attempt-summary"><h3>${title}</h3><dl>
-    ${showRegion ? `<dt>Selected region</dt><dd>${escapeHtml(JSON.stringify(attempt.selected_region))}</dd>` : ""}
-    <dt>Observation</dt><dd>${escapeHtml(attempt.observation_text)}</dd>
-    <dt>Stage judgement</dt><dd>${escapeHtml(stageLabel(attempt.selected_stage_id) || attempt.interpretation_text)}</dd>
-    ${attempt.confidence ? `<dt>Confidence</dt><dd>${escapeHtml(attempt.confidence)} / 5</dd>` : ""}
+    ${showRegion ? `<dt>选择区域</dt><dd>${escapeHtml(JSON.stringify(attempt.selected_region))}</dd>` : ""}
+    <dt>观察描述</dt><dd>${escapeHtml(attempt.observation_text)}</dd>
+    <dt>阶段判断</dt><dd>${escapeHtml(stageLabel(attempt.selected_stage_id) || attempt.interpretation_text)}</dd>
+    ${attempt.visual_evidence_reason ? `<dt>判断理由</dt><dd>${escapeHtml(attempt.visual_evidence_reason)}</dd>` : ""}
+    ${attempt.judgement_source ? `<dt>判断依据</dt><dd>${escapeHtml({image_evidence: "图片中直接看到的特征", prior_experience: "以前观察植物的经验", learned_knowledge: "课堂或书本中学过的知识", guessing: "主要依靠猜测", other: "其他"}[attempt.judgement_source] || attempt.judgement_source)}</dd>` : ""}
+    ${attempt.confidence ? `<dt>信心程度</dt><dd>${escapeHtml(attempt.confidence)} / 5</dd>` : ""}
   </dl></div>`;
 }
 
@@ -226,19 +245,19 @@ function render() {
   } else if (stage === "POSITIVE_FEEDBACK") {
     selectedRegion = projection.data.initial_attempt.selected_region;
     app.innerHTML = `<div class="study-layout">${imagePanel()}
-      <div class="form-panel"><p class="eyebrow">Positive feedback</p><h2>Response confirmed</h2>
+      <div class="form-panel"><p class="eyebrow">积极反馈</p><h2>回答已确认</h2>
         <div id="shown-feedback" class="positive-feedback"><p>${escapeHtml(projection.data.positive_feedback.text)}</p></div>
-        ${attemptSummary(projection.data.initial_attempt, "Initial observation · committed")}
-        <button id="reveal" type="button">Reveal expert cue</button>
+        ${attemptSummary(projection.data.initial_attempt, "首次观察 · 已提交")}
+        <button id="reveal" type="button">查看专家线索</button>
       </div></div>`;
     document.querySelector("#reveal").addEventListener("click", () => mutate("reveal"));
   } else if (stage === "HINT") {
     selectedRegion = (projection.data.revised_attempt || projection.data.initial_attempt).selected_region;
     app.innerHTML = `<div class="study-layout">${imagePanel()}
-      <div class="form-panel"><p class="eyebrow">Authored hint</p><h2>Look once more</h2>
-        <div id="shown-hint" class="hint-panel"><p class="hint-level">Level ${escapeHtml(projection.data.hint.hint_level)} hint</p><p>${escapeHtml(projection.data.hint.hint_text)}</p></div>
-        ${attemptSummary(projection.data.revised_attempt || projection.data.initial_attempt, projection.data.revised_attempt ? "Latest revised observation" : "Initial observation · committed")}
-        <button id="reobserve" type="button">Re-observe</button>
+      <div class="form-panel"><p class="eyebrow">预先编写的提示</p><h2>请再看一次</h2>
+        <div id="shown-hint" class="hint-panel"><p class="hint-level">第 ${escapeHtml(projection.data.hint.hint_level)} 级提示</p><p>${escapeHtml(projection.data.hint.hint_text)}</p></div>
+        ${attemptSummary(projection.data.revised_attempt || projection.data.initial_attempt, projection.data.revised_attempt ? "最近一次修改后的观察" : "首次观察 · 已提交")}
+        <button id="reobserve" type="button">再次观察</button>
       </div></div>`;
     document.querySelector("#reobserve").addEventListener("click", () => mutate("reobserve"));
   } else if (stage === "REOBSERVE") {
@@ -251,9 +270,9 @@ function render() {
     const training = projection.data.study_mode === "training";
     const action = training ? "reveal" : "complete-unaided";
     app.innerHTML = `<div class="study-layout">${imagePanel()}
-      <div class="form-panel"><p class="eyebrow">Final response committed</p><h2>${training ? "Compare with the expert cue" : "Complete this unaided item"}</h2>
-        ${attemptSummary(projection.data.revised_attempt, "Revised observation")}
-        <button id="${action}" type="button">${training ? "Reveal expert cue" : "Complete final submission"}</button>
+      <div class="form-panel"><p class="eyebrow">最终回答已提交</p><h2>${training ? "与专家线索比较" : "完成本题独立作答"}</h2>
+        ${attemptSummary(projection.data.revised_attempt, "修改后的观察")}
+        <button id="${action}" type="button">${training ? "查看专家线索" : "完成最终提交"}</button>
       </div></div>`;
     document.querySelector(`#${action}`).addEventListener("click", () => mutate(action));
   } else if (stage === "REVEAL") {
@@ -261,13 +280,13 @@ function render() {
   } else if (stage === "REFLECTION") {
     renderReveal(true);
   } else if (stage === "COMPLETE") {
-    app.innerHTML = `<div class="success"><p class="eyebrow">Study log saved</p><h2>Observation complete</h2>
-      <p>Thank you. Your responses and ${projection.data.study_mode === "training" ? "training interactions" : "unaided completion"} were recorded separately.</p>
-      <button id="another" type="button">Start another session</button></div>`;
+    app.innerHTML = `<div class="success"><p class="eyebrow">研究日志已保存</p><h2>观察任务已完成</h2>
+      <p>谢谢参与。你的回答和${projection.data.study_mode === "training" ? "训练过程中的交互" : "独立作答完成情况"}已分别记录。</p>
+      <button id="another" type="button">开始新的会话</button></div>`;
     document.querySelector("#another").addEventListener("click", showIntroduction);
     if (projection.data.has_next_item) {
       const next = document.createElement("button");
-      next.textContent = "Next item";
+      next.textContent = "下一题";
       next.id = "next-item";
       next.addEventListener("click", () => mutate("next-item"));
       document.querySelector(".success").append(next);
@@ -281,22 +300,22 @@ function renderReveal(showReflection) {
   selectedRegion = (projection.data.revised_attempt || projection.data.initial_attempt).selected_region;
   const receivedHint = projection.data.hint_received;
   const reflectionPrompt = receivedHint
-    ? "What did you notice after seeing the hint?"
-    : "What visual evidence was most important for your decision?";
+    ? "看到提示后，你注意到了什么？"
+    : "哪些视觉证据对你的判断最重要？";
   app.innerHTML = `<div class="study-layout">${imagePanel({ expertRegion: expert.target_region })}
-    <div class="form-panel"><p class="eyebrow">Bounded expert reveal</p><h2>Expert cue</h2>
+    <div class="form-panel"><p class="eyebrow">限定范围的专家揭示</p><h2>专家线索</h2>
       <dl class="reveal-grid">
-        <dt>Relevant region</dt><dd>${escapeHtml(expert.relevant_region)}</dd>
-        <dt>Diagnostic cue</dt><dd>${escapeHtml(expert.diagnostic_cue)}</dd>
-        <dt>Interpretation</dt><dd>${escapeHtml(expert.interpretation)}</dd>
+        <dt>相关区域</dt><dd>${escapeHtml(expert.relevant_region)}</dd>
+        <dt>诊断特征</dt><dd>${escapeHtml(expert.diagnostic_cue)}</dd>
+        <dt>解释</dt><dd>${escapeHtml(expert.interpretation)}</dd>
       </dl>
       ${showReflection ? `<form id="reflection-form" class="attempt-summary">
         <label for="reflection">${reflectionPrompt}</label>
         <textarea id="reflection" required></textarea>
-        <label for="reflection-category">What changed most in your judgment? (optional)</label>
-        <select id="reflection-category"><option value="">Choose an option</option>${["Where I looked", "What feature I noticed", "What the feature meant", "My confidence", "Other"].map(value => `<option>${value}</option>`).join("")}</select>
-        <button type="submit">Save reflection</button>
-      </form>` : `<button id="begin-reflection" type="button">${receivedHint ? "Reflect on what you noticed" : "Reflect on your visual evidence"}</button>`}
+        <label for="reflection-category">你的判断主要在哪方面发生了变化？（选填）</label>
+        <select id="reflection-category"><option value="">请选择</option>${[["Where I looked", "我查看的位置"], ["What feature I noticed", "我注意到的特征"], ["What the feature meant", "我对特征含义的理解"], ["My confidence", "我的信心程度"], ["Other", "其他"]].map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select>
+        <button type="submit">保存反思</button>
+      </form>` : `<button id="begin-reflection" type="button">${receivedHint ? "反思你注意到的内容" : "反思你的视觉证据"}</button>`}
     </div></div>`;
   if (showReflection) {
     document.querySelector("#reflection-form").addEventListener("submit", submitReflection);
@@ -322,7 +341,7 @@ function bindImageSelection() {
     if (!selectedRegion) return;
     const marker = document.createElement("span");
     marker.className = "selection-region";
-    marker.setAttribute("aria-label", "Your selected region");
+    marker.setAttribute("aria-label", "你选择的区域");
     for (const [key, value] of Object.entries(selectedRegion)) {
       marker.style[{x: "left", y: "top", width: "width", height: "height"}[key]] = `${value * 100}%`;
     }
@@ -351,9 +370,9 @@ function bindImageSelection() {
     if (selectedRegion.width < 0.005 || selectedRegion.height < 0.005) {
       selectedRegion = previous;
       draw();
-      setStatus("Drag to draw a rectangle with visible width and height.");
+      setStatus("请拖动绘制一个具有可见宽度和高度的矩形。");
     } else {
-      setStatus("Region selected. Drag again to redraw it before committing.");
+      setStatus("区域已选择。提交前可以再次拖动以重新绘制。");
     }
     start = null;
     shell.releasePointerCapture(event.pointerId);
@@ -365,11 +384,11 @@ function renderCommit(payload) {
   commitDraft = structuredClone(payload);
   updateProgress("COMMIT");
   app.innerHTML = `<div class="study-layout">${imagePanel()}
-    <div class="form-panel"><p class="eyebrow">Commit</p><h2>Review your observation</h2>
-      ${attemptSummary(payload, "Your initial response")}
-      <p>${projection.data.study_mode === "training" ? "Commit this response to receive feedback or guidance." : "Commit this response to continue to the final unaided submission."}</p>
-      <button id="commit-initial" type="button">Commit observation</button>
-      <button id="edit-initial" class="quiet-button" type="button">Edit response / redraw</button>
+    <div class="form-panel"><p class="eyebrow">提交</p><h2>检查你的观察</h2>
+      ${attemptSummary(payload, "你的首次回答")}
+      <p>${projection.data.study_mode === "training" ? "提交后将获得反馈或提示。" : "提交后将继续完成最终独立作答。"}</p>
+      <button id="commit-initial" type="button">确认提交观察</button>
+      <button id="edit-initial" class="quiet-button" type="button">修改回答 / 重画区域</button>
     </div></div>`;
   document.querySelector("#commit-initial").addEventListener("click", () => mutate("initial-observation", commitDraft));
   document.querySelector("#edit-initial").addEventListener("click", render);
@@ -379,10 +398,11 @@ function bindObservationForm(isRevision) {
   document.querySelector("#observation-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!selectedRegion || selectedRegion.width <= 0 || selectedRegion.height <= 0) {
-      setStatus("Drag to select a rectangle on the image before submitting.");
+      setStatus("提交前请在图片上拖动选择一个矩形区域。");
       return;
     }
     const selectedStage = document.querySelector('input[name="stage"]:checked');
+    const judgementSource = isRevision ? null : document.querySelector('input[name="judgement-source"]:checked');
     const legacyInterpretation = document.querySelector("#interpretation");
     const payload = {
       selected_region: selectedRegion,
@@ -390,13 +410,26 @@ function bindObservationForm(isRevision) {
       selected_stage_id: selectedStage?.value || null,
       interpretation_text: selectedStage ? stageLabel(selectedStage.value) : (legacyInterpretation?.value.trim() || ""),
     };
-    if (!isRevision) payload.confidence = Number(new FormData(event.currentTarget).get("confidence"));
+    if (!isRevision) {
+      payload.visual_evidence_reason = document.querySelector("#visual-evidence-reason").value.trim();
+      payload.judgement_source = judgementSource?.value || null;
+      payload.confidence = Number(new FormData(event.currentTarget).get("confidence"));
+    }
     if (!payload.observation_text) {
-      setStatus("Please describe the visible features in your selected region.");
+      setStatus("请描述所选区域中可见的特征。");
       return;
     }
     if (!payload.selected_stage_id && !payload.interpretation_text) {
-      setStatus("Please choose a plant stage.");
+      setStatus("请选择植物所处的阶段。");
+      return;
+    }
+    if (!isRevision && !payload.visual_evidence_reason) {
+      setStatus("请说明你作出阶段判断的理由，也可以如实表达不确定。");
+      document.querySelector("#visual-evidence-reason").focus();
+      return;
+    }
+    if (!isRevision && !payload.judgement_source) {
+      setStatus("请选择你的判断主要依据。");
       return;
     }
     if (isRevision) await mutate("revision", payload);
@@ -407,7 +440,7 @@ function bindObservationForm(isRevision) {
 async function submitReflection(event) {
   event.preventDefault();
   if (!document.querySelector("#reflection").value.trim()) {
-    setStatus("Please describe the visual evidence you noticed.");
+    setStatus("请描述你注意到的视觉证据。");
     return;
   }
   await mutate("reflection", { reflection_text: document.querySelector("#reflection").value.trim(), reflection_category: document.querySelector("#reflection-category").value || null });
@@ -417,7 +450,7 @@ async function mutate(action, payload = {}) {
   if (busy) return;
   busy = true;
   document.querySelectorAll("button").forEach(button => { button.disabled = true; });
-  setStatus("Saving…");
+  setStatus("正在保存……");
   try {
     projection = await api(`/api/sessions/${projection.data.session_id}/${action}`, {
       method: "POST",
@@ -444,8 +477,8 @@ async function mutate(action, payload = {}) {
 
 function updateProgress(stage) {
   const unaided = projection?.data.study_mode !== "training";
-  document.querySelector('[data-step="hint"]').textContent = unaided ? "3. No guidance" : "3. Guidance";
-  document.querySelector('[data-step="reveal"]').textContent = unaided ? "5. Finalize" : "5. Reveal";
+  document.querySelector('[data-step="hint"]').textContent = unaided ? "3. 无提示" : "3. 提示";
+  document.querySelector('[data-step="reveal"]').textContent = unaided ? "5. 完成" : "5. 揭示";
   const map = {
     OBSERVE: "observe", COMMIT: "commit", INITIAL_COMMITTED: "commit", HINT: "hint",
     POSITIVE_FEEDBACK: "reveal",
@@ -509,6 +542,8 @@ async function refreshLog() {
       selected_region: lastLog[`${prefix}_region`], observation_text: lastLog[`${prefix}_observation`],
       interpretation_text: lastLog[`${prefix}_interpretation`], selected_stage_id: lastLog[`${prefix}_stage_id`],
       confidence: lastLog[`${prefix}_confidence`],
+      visual_evidence_reason: lastLog[`${prefix}_visual_evidence_reason`],
+      judgement_source: lastLog[`${prefix}_judgement_source`],
     });
     const automaticHint = result.hints.find(hint => hint.id === lastLog.automatic_hint_id);
     document.querySelector("#researcher-summary").innerHTML = `
@@ -522,6 +557,8 @@ async function refreshLog() {
       <dt>Region correct</dt><dd>${escapeHtml(lastLog.region_correct)}</dd>
       <dt>Cue correct</dt><dd>${escapeHtml(lastLog.cue_correct)}</dd>
       <dt>Initial selected stage</dt><dd>${escapeHtml(stageLabel(lastLog.initial_stage_id))} (${escapeHtml(lastLog.initial_stage_id)})</dd>
+      <dt>Initial visual evidence reason</dt><dd>${escapeHtml(lastLog.initial_visual_evidence_reason)}</dd>
+      <dt>Initial judgement source</dt><dd>${escapeHtml(lastLog.initial_judgement_source)}</dd>
       <dt>Revised selected stage</dt><dd>${escapeHtml(stageLabel(lastLog.revised_stage_id))} (${escapeHtml(lastLog.revised_stage_id)})</dd>
       <dt>Correct stage</dt><dd>${escapeHtml(lastLog.correct_stage_label)} (${escapeHtml(lastLog.correct_stage_id)})</dd>
       <dt>Initial / revised stage correct</dt><dd>${escapeHtml(lastLog.initial_stage_correct)} / ${escapeHtml(lastLog.revised_stage_correct)}</dd>

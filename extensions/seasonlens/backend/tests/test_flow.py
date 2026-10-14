@@ -30,6 +30,8 @@ class FlowTests(unittest.TestCase):
                 "selected_region": {"x": 0.2, "y": 0.7, "width": 0.1, "height": 0.1},
                 "observation_text": "I see a branch.",
                 "selected_stage_id": "not_sure",
+                "visual_evidence_reason": "The branch shape made me unsure.",
+                "judgement_source": "image_evidence",
                 "confidence": 2,
             })
             self.assertEqual(hinted["data"]["stage"], "HINT")
@@ -44,7 +46,7 @@ class FlowTests(unittest.TestCase):
             revealed = service.reveal_expert_cue(session_id)
             self.assertEqual(revealed["data"]["stage"], "REVEAL")
             self.assertEqual(revealed["data"]["expert_reveal"]["diagnostic_cue"],
-                             "Several rounded flower buds are visible above the leaves, and their petals have not opened.")
+                             "叶片上方可见几个圆形花蕾，花瓣尚未开放。")
             service.begin_reflection(session_id)
             completed = service.submit_reflection(session_id, "I changed from the whole branch to its terminal bud.", "Where I looked")
             self.assertEqual(completed["data"]["stage"], "COMPLETE")
@@ -54,8 +56,10 @@ class FlowTests(unittest.TestCase):
             self.assertEqual(log["difficulty_code"], "REGION_MISS")
             self.assertEqual(log["condition"], "observation-first-contingent")
             self.assertEqual(log["participant_id"], "participant-001")
-            self.assertEqual(log["plant_name"], "Virginia anemone (Anemone virginiana)")
-            self.assertEqual(log["cue_family"], "Flower bud")
+            self.assertEqual(log["plant_name"], "弗吉尼亚银莲花（Anemone virginiana）")
+            self.assertEqual(log["cue_family"], "花蕾")
+            self.assertEqual(log["initial_visual_evidence_reason"], "The branch shape made me unsure.")
+            self.assertEqual(log["initial_judgement_source"], "image_evidence")
             self.assertEqual(log["initial_stage_id"], "not_sure")
             self.assertEqual(log["revised_stage_id"], "flower_buds_present")
             self.assertEqual(log["correct_stage_id"], "flower_buds_present")
@@ -88,6 +92,8 @@ class FlowTests(unittest.TestCase):
             "selected_region": {"x": 0.31, "y": 0.07, "width": 0.11, "height": 0.2},
             "observation_text": "rounded closed flower buds",
             "selected_stage_id": "flower_buds_present",
+            "visual_evidence_reason": "The rounded structures look closed.",
+            "judgement_source": "image_evidence",
             "confidence": 5,
         }
         service.submit_initial(session_id, initial)
@@ -102,6 +108,8 @@ class FormativeStudyTests(unittest.TestCase):
         self.initial = {
             "selected_region": {"x": 0.31, "y": 0.07, "width": 0.11, "height": 0.2},
             "observation_text": "rounded closed flower buds", "selected_stage_id": "flower_buds_present", "confidence": 4,
+            "visual_evidence_reason": "The visible rounded buds are still closed.",
+            "judgement_source": "image_evidence",
         }
 
     def complete(self) -> None:
@@ -113,19 +121,24 @@ class FormativeStudyTests(unittest.TestCase):
     def test_initial_response_cannot_be_mutated_by_caller_or_projection(self) -> None:
         projection = self.service.submit_initial(self.session_id, self.initial)
         self.initial["selected_region"]["x"] = 0
+        self.initial["visual_evidence_reason"] = "overwritten by caller"
         projection["data"]["initial_attempt"]["observation_text"] = "overwritten"
+        projection["data"]["initial_attempt"]["judgement_source"] = "guessing"
         log = self.service.export_study_log(self.session_id)
         log["initial_region"]["x"] = 0
         preserved = self.service.export_study_log(self.session_id)
         self.assertEqual(preserved["initial_region"]["x"], 0.31)
         self.assertEqual(preserved["initial_observation"], "rounded closed flower buds")
+        self.assertEqual(preserved["initial_visual_evidence_reason"],
+                         "The visible rounded buds are still closed.")
+        self.assertEqual(preserved["initial_judgement_source"], "image_evidence")
 
     def test_fully_correct_response_shows_positive_confirmation(self) -> None:
         projection = self.service.submit_initial(self.session_id, self.initial)
         self.assertEqual(projection["data"]["stage"], "POSITIVE_FEEDBACK")
         self.assertIsNone(projection["data"]["hint"])
         self.assertEqual(projection["data"]["positive_feedback"]["text"],
-                         "Good. The visible evidence you selected is consistent with the current stage.")
+                         "很好。你选择的可见证据与当前阶段一致。")
         log = self.service.export_study_log(self.session_id)
         self.assertTrue(log["region_correct"])
         self.assertTrue(log["interpretation_correct"])
@@ -134,7 +147,7 @@ class FormativeStudyTests(unittest.TestCase):
         self.assertIsNone(log["hint_level"])
         self.assertTrue(log["positive_feedback_shown"])
         self.assertEqual(log["positive_feedback_text"],
-                         "Good. The visible evidence you selected is consistent with the current stage.")
+                         "很好。你选择的可见证据与当前阶段一致。")
         self.assertFalse(log["hint_received"])
         self.assertIsNone(log["revised_response"])
         self.assertEqual(log["participant_path"], "INITIAL_CORRECT")
@@ -329,10 +342,10 @@ class FormativeStudyTests(unittest.TestCase):
 
     def test_new_plant_items_complete_the_training_flow(self) -> None:
         cases = {
-            "demo_solidago_001": ("open yellow flowers", "flowering"),
-            "demo_anemone_001": ("several rounded closed flower buds", "flower_buds_present"),
+            "demo_solidago_001": ("顶部有开放的黄色花朵", "flowering"),
+            "demo_anemone_001": ("茎尖有圆形花蕾", "flower_buds_present"),
             "demo_butterfly_weed_001": (
-                "open orange flowers and unopened buds",
+                "花簇中有开放的橙色花和未开放的花蕾",
                 "active_flowering_with_unopened_buds",
             ),
         }
@@ -346,6 +359,8 @@ class FormativeStudyTests(unittest.TestCase):
                     "selected_region": item["target_region"]["rect"],
                     "observation_text": observation,
                     "selected_stage_id": stage_id,
+                    "visual_evidence_reason": "Visible reproductive structures support this choice.",
+                    "judgement_source": "image_evidence",
                     "confidence": 4,
                 }
                 confirmed = service.submit_initial(session_id, response)
@@ -382,6 +397,8 @@ class FormativeStudyTests(unittest.TestCase):
                    dict(self.initial, observation_text="  "), dict(self.initial, selected_stage_id=None),
                    dict(self.initial, selected_stage_id="not_an_option")]
         invalid += [dict(self.initial, confidence=value) for value in [None, 0, 6, 2.5, True, "3"]]
+        invalid += [dict(self.initial, visual_evidence_reason=value) for value in [None, "  "]]
+        invalid += [dict(self.initial, judgement_source=value) for value in [None, "invalid_source"]]
         before = self.service.export_study_log(self.session_id)
         for payload in invalid:
             with self.subTest(payload=payload), self.assertRaises(ValueError):
@@ -413,6 +430,8 @@ class FormativeStudyTests(unittest.TestCase):
         self.assertEqual(row["manual_override"], "False")
         self.assertEqual(json.loads(row["initial_region"]), self.initial["selected_region"])
         self.assertEqual(row["initial_stage_id"], "flower_buds_present")
+        self.assertEqual(row["initial_visual_evidence_reason"], self.initial["visual_evidence_reason"])
+        self.assertEqual(row["initial_judgement_source"], "image_evidence")
         self.assertEqual(row["correct_stage_id"], "flower_buds_present")
         self.assertTrue(row["researcher_notes"].startswith("'=example"))
         self.assertIn('\nsecond line', row["researcher_notes"])
