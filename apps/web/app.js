@@ -301,7 +301,9 @@ function renderReveal(showReflection) {
   const receivedHint = projection.data.hint_received;
   const hintLearningQuestion = receivedHint ? `
         <label for="hint-learning-reflection">提示是否帮助你注意到或理解了之前没有发现的植物特征？如果有，你学到了什么？</label>
-        <textarea id="hint-learning-reflection" required></textarea>` : "";
+        <textarea id="hint-learning-reflection" required></textarea>` : `
+        <label for="reflection">刚才观察植物时，有没有什么地方让你觉得不确定？如果有，是什么？</label>
+        <textarea id="reflection" required></textarea>`;
   app.innerHTML = `<div class="study-layout">${imagePanel({ expertRegion: expert.target_region })}
     <div class="form-panel"><p class="eyebrow">限定范围的专家揭示</p><h2>专家线索</h2>
       <dl class="reveal-grid">
@@ -439,14 +441,22 @@ function bindObservationForm(isRevision) {
 async function submitReflection(event) {
   event.preventDefault();
   let hintLearningReflection = null;
+  let reflectionText = null;
   if (projection.data.hint_received) {
     hintLearningReflection = document.querySelector("#hint-learning-reflection").value.trim();
     if (!hintLearningReflection) {
       setStatus("请描述你从提示中学到的内容。");
       return;
     }
+  } else {
+    reflectionText = document.querySelector("#reflection").value.trim();
+    if (!reflectionText) {
+      setStatus("请描述观察植物时让你觉得不确定的地方；如果没有，请说明没有。");
+      return;
+    }
   }
   await mutate("reflection", {
+    reflection_text: reflectionText,
     hint_learning_reflection: hintLearningReflection,
     reflection_category: document.querySelector("#reflection-category").value || null,
   });
