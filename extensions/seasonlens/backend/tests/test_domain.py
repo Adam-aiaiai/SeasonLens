@@ -109,6 +109,41 @@ class DomainTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             catalog.get("unknown")
 
+    def test_natural_chinese_diagnostic_cues_are_recognized_without_broad_false_matches(self) -> None:
+        catalog = DemoItemCatalog()
+        cases = {
+            "demo_anemone_001": (
+                "flower_buds_present",
+                ["顶端是闭合的圆形结构", "花瓣尚未展开", "能看到圆鼓的花苞"],
+                "只有绿色叶片和细茎",
+            ),
+            "demo_solidago_001": (
+                "flowering",
+                ["顶部有成簇的黄花", "顶端有黄色花", "能看到黄色花序"],
+                "只有绿色叶片和直立的茎",
+            ),
+            "demo_butterfly_weed_001": (
+                "active_flowering_with_unopened_buds",
+                ["有的花开了有的还是花苞", "既有开放的花又有花苞", "橙色花和圆形花蕾同时出现"],
+                "只看到狭长的绿色叶片",
+            ),
+        }
+        for item_id, (stage_id, accepted_observations, rejected_observation) in cases.items():
+            item = catalog.get(item_id)
+            base = {
+                "selected_region": item["target_region"]["rect"],
+                "selected_stage_id": stage_id,
+                "interpretation_text": "",
+            }
+            for observation in accepted_observations:
+                with self.subTest(item_id=item_id, observation=observation):
+                    diagnostic = diagnose_response(item, {**base, "observation_text": observation})
+                    self.assertTrue(diagnostic["cue_correct"])
+                    self.assertEqual(diagnostic["primary_error"], "CORRECT")
+            diagnostic = diagnose_response(item, {**base, "observation_text": rejected_observation})
+            self.assertFalse(diagnostic["cue_correct"])
+            self.assertEqual(diagnostic["primary_error"], "CUE_MISIDENTIFIED")
+
 
 if __name__ == "__main__":
     unittest.main()
