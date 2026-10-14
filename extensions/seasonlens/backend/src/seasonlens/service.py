@@ -266,13 +266,23 @@ class SeasonLensService:
         self._persist(session_id)
         return self.participant_projection(session_id)
 
-    def submit_reflection(self, session_id: str, reflection_text: str,
-                          reflection_category: str | None = None) -> dict[str, Any]:
+    def submit_reflection(self, session_id: str, reflection_text: str = "",
+                          reflection_category: str | None = None, *,
+                          hint_learning_reflection: str | None = None) -> dict[str, Any]:
+        hint_received = bool(self._state(session_id).data.get("hint_sequence"))
+        legacy_text = reflection_text.strip() if isinstance(reflection_text, str) else reflection_text
+        learning_text = (hint_learning_reflection.strip()
+                         if isinstance(hint_learning_reflection, str) else hint_learning_reflection)
+        if hint_received and not learning_text and legacy_text:
+            learning_text = legacy_text
+        if learning_text and not legacy_text:
+            legacy_text = learning_text
         self._human_action(
             session_id,
             "RECORD_FEEDBACK_RESPONSE",
             {
-                "reflection_text": reflection_text,
+                "reflection_text": legacy_text or None,
+                "hint_learning_reflection": learning_text if hint_received else None,
                 "reflection_category": reflection_category or None,
                 "reflection_submitted_at": self.clock(),
             },
@@ -516,6 +526,7 @@ class SeasonLensService:
             "expert_reveal_at": data["expert_reveal_at"],
             "reveal_at": data["expert_reveal_at"],
             "reflection_text": reflection.get("reflection_text"),
+            "hint_learning_reflection": reflection.get("hint_learning_reflection"),
             "reflection_type": reflection_type,
             "reflection_category": reflection.get("reflection_category"),
             "reflection_submitted_at": reflection.get("reflection_submitted_at"),

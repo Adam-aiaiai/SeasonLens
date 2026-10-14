@@ -107,7 +107,8 @@ class SeasonLensHandler(BaseHTTPRequestHandler):
                 "reveal": lambda: SERVICE.reveal_expert_cue(session_id),
                 "reflection-stage": lambda: SERVICE.begin_reflection(session_id),
                 "reflection": lambda: SERVICE.submit_reflection(
-                    session_id, body.get("reflection_text", ""), body.get("reflection_category")
+                    session_id, body.get("reflection_text", ""), body.get("reflection_category"),
+                    hint_learning_reflection=body.get("hint_learning_reflection"),
                 ),
                 "complete-unaided": lambda: SERVICE.complete_unaided(session_id),
                 "hint-override": lambda: SERVICE.override_hint(session_id, str(body.get("hint_id", ""))),

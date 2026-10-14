@@ -21,10 +21,11 @@ the first commit and are not part of the post-reveal reflection.
 
 ## Path-specific reflection
 
-- **Initially correct; no guidance received:** “What visual evidence was most important for your decision?”
-- **Guidance received:** “What did you notice after seeing the hint?”
+- **No recorded hint exposure:** the hint-learning question is omitted.
+- **At least one recorded hint exposure:** “提示是否帮助你注意到或理解了之前没有发现的植物特征？如果有，你学到了什么？”
 
-The guidance prompt is deliberately neutral: participants are not required to say that a hint helped.
+The prompt is open-ended and permits participants to report that the hint did not
+help. Visibility follows recorded hint exposure, not inferred correctness.
 
 ## Post-task formative questions
 

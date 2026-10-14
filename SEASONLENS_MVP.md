@@ -56,9 +56,10 @@ shipped event handlers with DOM doubles; they are not a real-browser visual test
    escalates the same error from Level 1 to Level 3, and stops after Level 3.
 5. **Reveal:** explicitly reveal the expert cue, interpretation, and target rectangle.
    The selected rectangle remains visible alongside the expert rectangle.
-6. **Reflect:** initially correct participants answer a general visual-evidence
-   question. Participants who received guidance answer the neutral prompt “What did
-   you notice after seeing the hint?” Save reflection to complete the item.
+6. **Reflect:** participants who actually received at least one recorded hint answer
+   the open prompt “提示是否帮助你注意到或理解了之前没有发现的植物特征？如果有，你学到了什么？”.
+   The prompt is omitted when no hint was delivered. The existing optional change
+   category remains available, and saving the reflection completes the item.
 
 The progress bar highlights the current participant stage and marks Guidance and
 Re-observe as skipped for an initially correct response. Commit review
@@ -264,7 +265,8 @@ is append-only. Reset and item advancement preserve old files. Existing logs fro
 the point-selection MVP remain untouched; newly created logs use rectangles.
 
 Logs include IDs/condition, stage transitions, separate initial/revised responses,
-confidence, initial `visual_evidence_reason` and `judgement_source`, all component diagnostic flags and primary error, automatic/actual hint
+confidence, initial `visual_evidence_reason` and `judgement_source`, conditional
+`hint_learning_reflection`, all component diagnostic flags and primary error, automatic/actual hint
 IDs, override flag, type, numeric level, exposure sequence, reflection text/category,
 researcher notes, and item start, initial submission, hint exposure, revision,
 reveal, reflection submission, and completion timestamps. `difficulty_code`,

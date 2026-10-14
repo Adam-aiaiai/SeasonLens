@@ -356,7 +356,16 @@ class SeasonLensExtension:
             }, "REVEAL_EXPERT_CUE requires POSITIVE_FEEDBACK or REVISED_COMMITTED; "
                f"current stage is {state.data['stage']}.")
         elif proposal.action_type == "RECORD_FEEDBACK_RESPONSE":
-            _require(isinstance(payload.get("reflection_text"), str) and bool(payload["reflection_text"].strip()), "Reflection is required.")
+            _require(payload.get("reflection_text") is None
+                     or isinstance(payload.get("reflection_text"), str),
+                     "Reflection must be text.")
+            _require(payload.get("hint_learning_reflection") is None
+                     or isinstance(payload.get("hint_learning_reflection"), str),
+                     "Hint-learning reflection must be text.")
+            if state.data.get("hint_sequence"):
+                learning = payload.get("hint_learning_reflection")
+                _require(isinstance(learning, str) and bool(learning.strip()),
+                         "Hint-learning reflection is required after a hint.")
             _require(payload.get("reflection_category") in (None, "", "Where I looked", "What feature I noticed",
                      "What the feature meant", "My confidence", "Other"), "Choose a reflection option.")
         elif proposal.action_type in {"OVERRIDE_AUTHORED_HINT", "RECORD_RESEARCHER_NOTE"}:

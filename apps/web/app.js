@@ -299,9 +299,9 @@ function renderReveal(showReflection) {
   const expert = projection.data.expert_reveal;
   selectedRegion = (projection.data.revised_attempt || projection.data.initial_attempt).selected_region;
   const receivedHint = projection.data.hint_received;
-  const reflectionPrompt = receivedHint
-    ? "看到提示后，你注意到了什么？"
-    : "哪些视觉证据对你的判断最重要？";
+  const hintLearningQuestion = receivedHint ? `
+        <label for="hint-learning-reflection">提示是否帮助你注意到或理解了之前没有发现的植物特征？如果有，你学到了什么？</label>
+        <textarea id="hint-learning-reflection" required></textarea>` : "";
   app.innerHTML = `<div class="study-layout">${imagePanel({ expertRegion: expert.target_region })}
     <div class="form-panel"><p class="eyebrow">限定范围的专家揭示</p><h2>专家线索</h2>
       <dl class="reveal-grid">
@@ -310,12 +310,11 @@ function renderReveal(showReflection) {
         <dt>解释</dt><dd>${escapeHtml(expert.interpretation)}</dd>
       </dl>
       ${showReflection ? `<form id="reflection-form" class="attempt-summary">
-        <label for="reflection">${reflectionPrompt}</label>
-        <textarea id="reflection" required></textarea>
+        ${hintLearningQuestion}
         <label for="reflection-category">你的判断主要在哪方面发生了变化？（选填）</label>
         <select id="reflection-category"><option value="">请选择</option>${[["Where I looked", "我查看的位置"], ["What feature I noticed", "我注意到的特征"], ["What the feature meant", "我对特征含义的理解"], ["My confidence", "我的信心程度"], ["Other", "其他"]].map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select>
         <button type="submit">保存反思</button>
-      </form>` : `<button id="begin-reflection" type="button">${receivedHint ? "反思你注意到的内容" : "反思你的视觉证据"}</button>`}
+      </form>` : `<button id="begin-reflection" type="button">${receivedHint ? "反思你从提示中学到的内容" : "继续完成反思"}</button>`}
     </div></div>`;
   if (showReflection) {
     document.querySelector("#reflection-form").addEventListener("submit", submitReflection);
@@ -439,11 +438,18 @@ function bindObservationForm(isRevision) {
 
 async function submitReflection(event) {
   event.preventDefault();
-  if (!document.querySelector("#reflection").value.trim()) {
-    setStatus("请描述你注意到的视觉证据。");
-    return;
+  let hintLearningReflection = null;
+  if (projection.data.hint_received) {
+    hintLearningReflection = document.querySelector("#hint-learning-reflection").value.trim();
+    if (!hintLearningReflection) {
+      setStatus("请描述你从提示中学到的内容。");
+      return;
+    }
   }
-  await mutate("reflection", { reflection_text: document.querySelector("#reflection").value.trim(), reflection_category: document.querySelector("#reflection-category").value || null });
+  await mutate("reflection", {
+    hint_learning_reflection: hintLearningReflection,
+    reflection_category: document.querySelector("#reflection-category").value || null,
+  });
 }
 
 async function mutate(action, payload = {}) {
@@ -574,7 +580,8 @@ async function refreshLog() {
       <dt>Positive feedback</dt><dd>${escapeHtml(lastLog.positive_feedback_shown)} / ${escapeHtml(lastLog.positive_feedback_text)}</dd>
       <dt>Manual override</dt><dd>${escapeHtml(lastLog.manual_override)}</dd>
       <dt>Self-corrected after hint</dt><dd>${escapeHtml(lastLog.self_corrected_after_hint)}</dd>
-      <dt>Reflection type / text / category</dt><dd>${escapeHtml(lastLog.reflection_type)} / ${escapeHtml(lastLog.reflection_text)} / ${escapeHtml(lastLog.reflection_category)}</dd></dl>
+      <dt>Reflection type / text / category</dt><dd>${escapeHtml(lastLog.reflection_type)} / ${escapeHtml(lastLog.reflection_text)} / ${escapeHtml(lastLog.reflection_category)}</dd>
+      <dt>Hint-learning reflection</dt><dd>${escapeHtml(lastLog.hint_learning_reflection)}</dd></dl>
       <div class="response-comparison">${attemptSummary(attempt("initial"), "Initial response", true)}${attemptSummary(attempt("revised"), "Revised response after guidance / final unaided response", true)}</div>
       ${researcherRegionPanels(result.regions, lastLog, projection.data.item)}`;
     const select = document.querySelector("#hint-override");

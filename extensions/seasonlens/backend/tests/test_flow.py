@@ -154,6 +154,61 @@ class FormativeStudyTests(unittest.TestCase):
         self.assertIsNone(log["hint_id"])
         self.assertIsNone(log["hint_level"])
 
+    def test_no_hint_reflection_omits_hint_learning_answer_without_validation(self) -> None:
+        self.service.submit_initial(self.session_id, self.initial)
+        self.service.reveal_expert_cue(self.session_id)
+        self.service.begin_reflection(self.session_id)
+        completed = self.service.submit_reflection(
+            self.session_id, reflection_category="My confidence"
+        )
+        self.assertEqual(completed["data"]["stage"], "COMPLETE")
+        log = self.service.export_study_log(self.session_id)
+        self.assertFalse(log["hint_received"])
+        self.assertIsNone(log["hint_learning_reflection"])
+        self.assertIsNone(log["reflection_text"])
+        self.assertEqual(log["reflection_category"], "My confidence")
+        row = next(csv.DictReader(io.StringIO(self.service.export_study_csv(self.session_id))))
+        self.assertEqual(row["hint_learning_reflection"], "")
+
+    def test_hint_learning_reflection_persists_after_correct_or_incorrect_revision(self) -> None:
+        cases = [("observation-first-contingent", True), ("observation-first-yoked", False)]
+        for condition, revised_correct in cases:
+            with self.subTest(revised_correct=revised_correct):
+                service = SeasonLensService(clock=Clock())
+                session_id = service.create_session(
+                    f"hint-reflection-{revised_correct}", condition=condition
+                )["data"]["session_id"]
+                initial = dict(
+                    self.initial,
+                    selected_region={"x": 0.25, "y": 0.58, "width": 0.5, "height": 0.39},
+                    observation_text="只看到叶片",
+                    selected_stage_id="not_sure",
+                )
+                hinted = service.submit_initial(session_id, initial)
+                self.assertTrue(hinted["data"]["hint_received"])
+                service.begin_reobservation(session_id)
+                revision = (self.initial if revised_correct else dict(
+                    self.initial, observation_text="仍然只看到叶片", selected_stage_id="fruiting"
+                ))
+                revised = service.submit_revision(session_id, revision)
+                self.assertEqual(revised["data"]["stage"], "REVISED_COMMITTED")
+                service.reveal_expert_cue(session_id)
+                service.begin_reflection(session_id)
+                with self.assertRaisesRegex(ValueError, "Hint-learning reflection is required"):
+                    service.submit_reflection(session_id)
+                answer = "提示让我注意到之前忽略的花蕾。"
+                completed = service.submit_reflection(
+                    session_id, hint_learning_reflection=answer
+                )
+                self.assertEqual(completed["data"]["stage"], "COMPLETE")
+                log = service.export_study_log(session_id)
+                self.assertTrue(log["hint_received"])
+                self.assertEqual(log["hint_learning_reflection"], answer)
+                self.assertEqual(log["reflection_text"], answer)
+                self.assertEqual(log["events"][-1]["payload"]["reflection"]["hint_learning_reflection"], answer)
+                row = next(csv.DictReader(io.StringIO(service.export_study_csv(session_id))))
+                self.assertEqual(row["hint_learning_reflection"], answer)
+
     def test_partial_answers_keep_existing_corrective_hints(self) -> None:
         cases = [
             (dict(self.initial, selected_region={"x": 0.2, "y": 0.7, "width": 0.1, "height": 0.1}),
@@ -418,9 +473,8 @@ class FormativeStudyTests(unittest.TestCase):
         with self.assertRaises(ValueError): self.service.submit_revision(self.session_id, self.initial)
         self.service.reveal_expert_cue(self.session_id)
         self.service.begin_reflection(self.session_id)
-        with self.assertRaises(ValueError): self.service.submit_reflection(self.session_id, " ")
         with self.assertRaises(ValueError): self.service.submit_reflection(self.session_id, "Changed", "Invalid choice")
-        self.service.submit_reflection(self.session_id, "Changed", "What the feature meant")
+        self.service.submit_reflection(self.session_id, " ", "What the feature meant")
         with self.assertRaises(ValueError): self.service.submit_reflection(self.session_id, "Overwritten")
 
     def test_csv_retains_false_flags_nested_regions_and_escaped_text(self) -> None:

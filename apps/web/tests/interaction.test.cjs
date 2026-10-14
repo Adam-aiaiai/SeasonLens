@@ -213,7 +213,7 @@ test("fully correct feedback is rendered without a hint level", () => {
   assert.doesNotMatch(f.node("#app").innerHTML, /hint-level|Level 1/);
 });
 
-test("reflection wording follows whether guidance was received", () => {
+test("hint-learning reflection follows actual hint exposure and keeps the category question", () => {
   const f = fixture(false);
   f.run(`projection.data.stage = "REFLECTION";
     projection.data.study_mode = "training";
@@ -222,10 +222,52 @@ test("reflection wording follows whether guidance was received", () => {
     projection.data.expert_reveal = {target_region: {x: 0.1, y: 0.1, width: 0.2, height: 0.2}, relevant_region: "upper bud", diagnostic_cue: "closed bud", interpretation: "Flower buds present"};
     projection.data.hint_received = false;
     render();`);
-  assert.match(f.node("#app").innerHTML, /哪些视觉证据对你的判断最重要/);
-  assert.doesNotMatch(f.node("#app").innerHTML, /看到提示后/);
+  assert.doesNotMatch(f.node("#app").innerHTML, /提示是否帮助你注意到或理解了之前没有发现的植物特征/);
+  assert.doesNotMatch(f.node("#app").innerHTML, /hint-learning-reflection/);
+  assert.match(f.node("#app").innerHTML, /你的判断主要在哪方面发生了变化/);
   f.run("projection.data.hint_received = true; render();");
-  assert.match(f.node("#app").innerHTML, /看到提示后，你注意到了什么/);
+  assert.match(f.node("#app").innerHTML, /提示是否帮助你注意到或理解了之前没有发现的植物特征？如果有，你学到了什么？/);
+  assert.match(f.node("#app").innerHTML, /id="hint-learning-reflection" required/);
+  f.run(`projection.data.revised_attempt = {...projection.data.initial_attempt, selected_stage_id: "flower_buds_present"}; render();`);
+  assert.match(f.node("#app").innerHTML, /hint-learning-reflection/);
+  f.run(`projection.data.revised_attempt.selected_stage_id = "fruiting"; render();`);
+  assert.match(f.node("#app").innerHTML, /hint-learning-reflection/);
+});
+
+test("hidden hint-learning reflection is not validated or sent as an empty answer", async () => {
+  const f = fixture(false);
+  f.run(`projection.data.stage = "REFLECTION";
+    projection.data.study_mode = "training";
+    projection.data.initial_attempt = {selected_region: {x: 0.1, y: 0.1, width: 0.2, height: 0.2}, observation_text: "bud", selected_stage_id: "flower_buds_present", interpretation_text: "Flower buds present"};
+    projection.data.revised_attempt = null;
+    projection.data.expert_reveal = {target_region: {x: 0.1, y: 0.1, width: 0.2, height: 0.2}, relevant_region: "upper bud", diagnostic_cue: "closed bud", interpretation: "Flower buds present"};
+    projection.data.hint_received = false;
+    render();`);
+  f.node("#reflection-category").value = "My confidence";
+  await f.node("#reflection-form").listeners.submit({ preventDefault() {} });
+  const payload = JSON.parse(f.requests[0].options.body);
+  assert.equal(payload.hint_learning_reflection, null);
+  assert.equal(payload.reflection_category, "My confidence");
+  assert.doesNotMatch(f.node("#status").textContent, /提示中学到/);
+});
+
+test("visible hint-learning reflection requires and submits an open-ended answer", async () => {
+  const f = fixture(false);
+  f.run(`projection.data.stage = "REFLECTION";
+    projection.data.study_mode = "training";
+    projection.data.initial_attempt = {selected_region: {x: 0.1, y: 0.1, width: 0.2, height: 0.2}, observation_text: "leaf", selected_stage_id: "not_sure", interpretation_text: "Not sure"};
+    projection.data.revised_attempt = null;
+    projection.data.expert_reveal = {target_region: {x: 0.1, y: 0.1, width: 0.2, height: 0.2}, relevant_region: "upper bud", diagnostic_cue: "closed bud", interpretation: "Flower buds present"};
+    projection.data.hint_received = true;
+    render();`);
+  const form = f.node("#reflection-form");
+  await form.listeners.submit({ preventDefault() {} });
+  assert.match(f.node("#status").textContent, /请描述你从提示中学到的内容/);
+  assert.equal(f.requests.length, 0);
+  f.node("#hint-learning-reflection").value = "我学会了关注闭合花蕾。";
+  await form.listeners.submit({ preventDefault() {} });
+  const payload = JSON.parse(f.requests[0].options.body);
+  assert.equal(payload.hint_learning_reflection, "我学会了关注闭合花蕾。");
 });
 
 const authoredRegions = {
