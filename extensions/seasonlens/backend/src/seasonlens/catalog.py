@@ -18,7 +18,9 @@ class DemoItemCatalog:
     """Loads the frozen authored item library; it never generates ecological text."""
 
     def __init__(self, item_path: Path = DEFAULT_ITEM_PATH.parent) -> None:
-        paths = sorted(item_path.glob("*.json")) if item_path.is_dir() else [item_path]
+        # Questionnaire and material configuration JSON lives beside demo items;
+        # only authored prototype item files belong in this catalog.
+        paths = sorted(item_path.glob("demo_*.json")) if item_path.is_dir() else [item_path]
         preferred = {
             "demo_anemone_001": 0,
             "demo_solidago_001": 1,

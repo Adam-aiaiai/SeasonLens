@@ -1,0 +1,113 @@
+{
+  "instrument_id": "SeasonLens_Formative_Participant_Questionnaire_v3_Bilingual",
+  "version": 3,
+  "source_document": "SeasonLens_Formative_Participant_Questionnaire_v3_Bilingual.docx",
+  "participant_notice": {
+    "zh": "本研究希望了解人们如何观察植物，而不是测试您的植物学知识。您可以回答“不确定”“看不出可靠变化”，跳过问题，或要求停止。请按研究员安排逐页完成，不要提前阅读后面的任务页。研究员可以按您的口述记录答案。",
+    "en": "We seek to understand how people observe plants, not test botanical knowledge. You may say “I am unsure” or “I cannot see a reliable change,” skip a question, or stop. Please complete each page when instructed, without reading ahead. The researcher may write down your spoken responses."
+  },
+  "materials": {
+    "B": [{
+      "material_id": "B_COMPLETE_PLANT_001",
+      "image_path": "/assets/study/B_COMPLETE_PLANT_001.png",
+      "sha256": "1134DEBE602AEE3B33691EC61FD3C968035D21A34F78673A07F85A0E4979D251",
+      "source": {"document": "SeasonLens_Formative_Participant_Questionnaire_v3_Bilingual.docx", "relationship_id": "rId8", "package_path": "word/media/image1.png"}
+    }],
+    "C": [{
+      "material_id": "C_SAME_PLANT_T1_001",
+      "image_path": "/assets/study/C_SAME_PLANT_T1_001.png",
+      "sha256": "A36CEDFB76B6D5D7FA5B56BA599A60A3EA127AC5603511A95B71C13F50B73065",
+      "timepoint": "earlier",
+      "source": {"document": "SeasonLens_Formative_Participant_Questionnaire_v3_Bilingual.docx", "relationship_id": "rId9", "package_path": "word/media/image2.png"}
+    }, {
+      "material_id": "C_SAME_PLANT_T2_001",
+      "image_path": "/assets/study/C_SAME_PLANT_T2_001.png",
+      "sha256": "6BCF8F0A0D3F6C99F19E51757364D98BCDA2C9A3245EFA8558B6065C4D813DCD",
+      "timepoint": "current",
+      "source": {"document": "SeasonLens_Formative_Participant_Questionnaire_v3_Bilingual.docx", "relationship_id": "rId10", "package_path": "word/media/image3.png"}
+    }],
+    "D": [{
+      "material_id": "D_CHALLENGING_PLANT_001",
+      "image_path": "/assets/study/D_CHALLENGING_PLANT_001.png",
+      "sha256": "FEC3D079022E33E99A8A0AED5A69F69E31C5BCBED51017AC6441E75C0E760A54",
+      "source": {"document": "SeasonLens_Formative_Participant_Questionnaire_v3_Bilingual.docx", "relationship_id": "rId11", "package_path": "word/media/image4.png"}
+    }]
+  },
+  "sections": {
+    "A": {
+      "title": {"zh": "背景信息", "en": "Background"},
+      "fields": [
+        {"id": "A1", "type": "choice", "zh": "您的年龄范围是？", "en": "What is your age range?", "options": [
+          {"value": "18_20", "zh": "18–20 岁", "en": "18–20"}, {"value": "21_25", "zh": "21–25 岁", "en": "21–25"},
+          {"value": "26_35", "zh": "26–35 岁", "en": "26–35"}, {"value": "36_plus", "zh": "36 岁及以上", "en": "36 or older"},
+          {"value": "prefer_not_to_answer", "zh": "不愿回答", "en": "Prefer not to answer"}]},
+        {"id": "A2", "type": "text", "zh": "您的专业、学习领域或工作领域是什么？", "en": "What is your major, field of study, or area of work?"},
+        {"id": "A3", "type": "choice", "zh": "您是否接受过与植物、生态、园艺或环境科学相关的课程或培训？", "en": "Have you taken courses or training related to plants, ecology, horticulture, or environmental science?", "options": [
+          {"value": "never", "zh": "从未", "en": "Never"}, {"value": "one_or_short", "zh": "一门课程或短期培训", "en": "One course or short training"},
+          {"value": "several_or_systematic", "zh": "多门课程或系统训练", "en": "Several courses or systematic training"}, {"value": "not_sure", "zh": "不确定", "en": "Not sure"}]},
+        {"id": "A4", "type": "choice", "zh": "您照料或种植植物的频率如何？", "en": "How often do you grow or care for plants?", "options": [
+          {"value": "never", "zh": "从未", "en": "Never"}, {"value": "past_rarely_now", "zh": "曾经，但现在很少", "en": "In the past, rarely now"},
+          {"value": "monthly", "zh": "每月左右", "en": "About monthly"}, {"value": "weekly_plus", "zh": "每周或更频繁", "en": "Weekly or more"}]},
+        {"id": "A5", "type": "choice", "zh": "您平时主动观察身边植物或季节变化的频率如何？", "en": "How often do you actively observe plants or seasonal changes around you?", "options": [
+          {"value": "almost_never", "zh": "几乎从不", "en": "Almost never"}, {"value": "occasional", "zh": "偶尔（每年数次）", "en": "Occasionally (a few times a year)"},
+          {"value": "monthly", "zh": "每月", "en": "Monthly"}, {"value": "weekly_plus", "zh": "每周或更频繁", "en": "Weekly or more"}]},
+        {"id": "A6", "type": "choice", "zh": "您是否使用过植物识别应用或 AI 工具来了解植物？", "en": "Have you used a plant identification app or AI tool to learn about plants?", "options": [
+          {"value": "never", "zh": "从未", "en": "Never"}, {"value": "once_or_twice", "zh": "使用过 1–2 次", "en": "Once or twice"},
+          {"value": "occasionally", "zh": "偶尔使用", "en": "Occasionally"}, {"value": "frequently", "zh": "经常使用", "en": "Frequently"}]},
+        {"id": "A6_INFO", "type": "text", "optional": true, "zh": "若使用过，您通常希望得到什么信息？（选答）", "en": "If so, what information were you usually looking for? (Optional)"}
+      ]
+    },
+    "B": {
+      "title": {"zh": "真实植物观察", "en": "Field Observation | After unaided observation"},
+      "instructions": {"zh": "本页仅在完成第一段自由观察后出示。请根据刚才真实观察到的内容回答，而不是您认为“应该”看到的内容。", "en": "Show this page only after the initial free-observation period. Answer based on what you actually observed, not what you think you should have noticed."},
+      "fields": [
+        {"id": "B1", "type": "text", "zh": "您第一眼注意到了什么？", "en": "What did you notice first when you looked at this plant?"},
+        {"id": "B2", "type": "text", "zh": "如果想进一步了解这株植物目前的状态，您会继续查看哪里？为什么？（如方便，请现场指认。）", "en": "If you wanted to understand the plant’s current condition better, where would you look next, and why? (Please point it out if convenient.)"},
+        {"id": "B3", "type": "text", "zh": "刚才您关注了哪些具体特征？为什么觉得这些特征可能有帮助？", "en": "Which specific features did you pay attention to? Why did you think they might be useful?"},
+        {"id": "B4", "type": "text", "zh": "您是否改变过观察距离、角度或位置？如果有，是什么让您决定这么做？", "en": "Did you change your viewing distance, angle, or position? If so, what led you to do that?"},
+        {"id": "B5", "type": "text", "zh": "您现在能作出哪些判断？哪些地方还不能确定？", "en": "What can you conclude at this point, and what remains uncertain?"},
+        {"id": "B5_CONFIDENCE", "type": "confidence", "zh": "把握程度", "en": "Confidence"}
+      ],
+      "closing": {"zh": "没有预设唯一正确的观察位置；“证据还不够”也是合理回答。", "en": "There is no single required observation area; “there is not enough evidence” is a valid response."}
+    },
+    "C": {
+      "title": {"zh": "同株时间比较", "en": "Temporal Comparison | Two time points of the same individual plant"},
+      "instructions": {"zh": "请观察研究员展示的同一株植物在两个时间点的资料。研究员不会预先告诉您是否真的发生了变化。", "en": "Please examine the materials presented by the researcher showing the same individual plant at two time points. The researcher will not tell you in advance whether a change occurred."},
+      "fields": [
+        {"id": "C1", "type": "text", "zh": "两份材料有哪些相同或不同之处？如果看不出可靠变化，也可以直接说明。", "en": "What similarities or differences do you notice between the two materials? You may say if no reliable change is apparent."},
+        {"id": "C2", "type": "text", "zh": "您的判断依据是什么？请指出对应位置或具体可见特征。", "en": "What evidence supports your judgment? Please point to the relevant area or describe the visible features."},
+        {"id": "C3", "type": "text", "zh": "您是怎样进行比较的？有没有特别回看或反复检查的地方？", "en": "How did you compare the materials? Were there areas you revisited or checked repeatedly?"},
+        {"id": "C4", "type": "text", "zh": "这些线索可能说明什么？哪些解释目前还不够确定？", "en": "What might these cues indicate? Which interpretations remain uncertain?"},
+        {"id": "C5", "type": "confidence", "zh": "您对刚才判断的把握程度如何？", "en": "How confident are you in the judgment you just made?"},
+        {"id": "C6", "type": "text", "zh": "如果可以再检查一个地方或获得一份额外材料，您最想检查什么？", "en": "If you could inspect one more area or obtain one additional piece of information, what would you most want to check?"}
+      ]
+    },
+    "D": {
+      "title": {"zh": "进一步观察", "en": "Additional Observation | Uncertainty or challenging material"},
+      "instructions": {"zh": "请按自己的方式观察新的材料，说明哪些内容能够确认，哪些还不能确认。此阶段不提供系统提示或参考答案。", "en": "Please examine the new material in your own way and describe what you can and cannot confirm. No system hints or reference answers are provided during this stage."},
+      "fields": [
+        {"id": "D1", "type": "text", "zh": "观察这张图片时，您注意到了植物的哪些具体特征？有没有什么地方是您看不清楚或无法确定的？", "en": "What specific features of the plant did you notice in this image? Was there anything you could not see clearly or were unsure about?"},
+        {"id": "D2", "type": "text", "zh": "刚才有没有某个时刻让您感到困难或犹豫？当时您做了什么？例如，重新查看某个位置。", "en": "Was there a moment when you felt unsure or hesitated? What did you do at that time?"},
+        {"id": "D3", "type": "text", "zh": "仔细观察之后，您对这株植物的最初想法有没有发生变化？如果有，是什么让您改变了想法？", "en": "After looking more carefully, did your initial impression of the plant change? If so, what made you change your mind?"},
+        {"id": "D4", "type": "text", "zh": "如果您想进一步了解这株植物目前的状态，您还希望观察什么，或者获得什么额外信息？", "en": "If you wanted to better understand or confirm the plant's current condition, what else would you like to observe, or what additional information would you need?"},
+        {"id": "D_CONFIDENCE", "type": "confidence", "zh": "您对目前关于这株植物的判断有多大把握？", "en": "How confident are you in your current judgment about this plant?"},
+        {"id": "D5", "type": "text", "zh": "在刚才的观察过程中，您最希望在哪个时候获得帮助？为什么？如果不需要帮助，也可以直接说明。", "en": "During the observation task, at what point would you have most wanted help, and why? If you did not need any help, you may say so."},
+        {"id": "D6", "type": "text", "zh": "如果可以获得帮助，您希望得到什么样的帮助？如果不需要帮助，也可以直接说明。", "en": "If help had been available, what kind of help would you have wanted? You may also say if you did not need any help."}
+      ],
+      "closing": {"zh": "不确定是允许的回答；研究员不会在此阶段透露正确答案。", "en": "Uncertainty is an acceptable response; the researcher will not reveal an answer in this phase."}
+    },
+    "E": {
+      "title": {"zh": "任务后回顾访谈", "en": "Retrospective Reflection | After All Observation and Prototype Tasks"},
+      "instructions": {"zh": "请回想刚才完成的所有任务，包括前面独立观察植物的过程，以及随后使用 SeasonLens 观察工具的体验。请根据自己的真实经历回答以下问题，没有标准答案。您可以说明某个经历发生在哪一个阶段。", "en": "Please reflect on all the tasks you have just completed, including your initial observations without assistance and your subsequent experience using the SeasonLens observation tool. Answer the following questions based on your actual experience. There are no right or wrong answers. You may indicate which stage of the study you are referring to."},
+      "fields": [
+        {"id": "E1", "type": "text", "zh": "回想整个研究过程（包括独立观察和工具体验），哪个具体时刻让您觉得最困难或最不确定？为什么？", "en": "Looking back at the entire study, including the unaided observation tasks and the tool experience, which specific moment did you find most difficult or uncertain, and why?"},
+        {"id": "E2", "type": "text", "zh": "在刚才提到的困难时刻，如果可以获得帮助，您最希望得到什么样的帮助？为什么？如果不需要帮助，也可以直接说明。", "en": "At the difficult moment you just described, what kind of help would you have wanted, and why? You may also say if you did not need any help."},
+        {"id": "E3", "type": "choice", "zh": "您希望观察工具在什么时候提供帮助？（请选择最接近的选项。）", "en": "When would you prefer an observation tool to offer help? (Choose the closest option.)", "options": [
+          {"value": "on_request", "zh": "当我主动请求时", "en": "When I request it"}, {"value": "ask_first", "zh": "工具先询问我是否需要帮助", "en": "When the tool first asks if I need help"},
+          {"value": "detects_difficulty", "zh": "当工具发现我遇到困难时", "en": "When the tool detects that I am having difficulty"}, {"value": "depends", "zh": "根据不同情况决定", "en": "It depends on the situation"}]},
+        {"id": "E3_WHY", "type": "text", "zh": "为什么？", "en": "Why?"},
+        {"id": "E4", "type": "text", "zh": "您觉得在什么情况下，工具提供的提示可能会打断您的观察，或者影响您自己作出判断？", "en": "In what situations do you think prompts from an observation tool might interrupt your observation or affect your ability to make your own judgment?"}
+      ]
+    }
+  }
+}

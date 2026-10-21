@@ -1,52 +1,46 @@
-# SeasonLens formative questionnaire
+# SeasonLens formative participant questionnaire v3
 
-This questionnaire is aligned with the current formative prototype. It evaluates interaction clarity and the observation-first scaffolding experience; it is not the final main-study instrument.
+The authoritative source is
+`SeasonLens_Formative_Participant_Questionnaire_v3_Bilingual.docx`. The executable,
+versioned transcription is
+`extensions/seasonlens/data/formative_questionnaire_v3.json`.
 
-## Participant task wording
+The implementation preserves the A–E structure and question IDs. Minor formatting
+normalizations separate Chinese and English prompts, consistently space IDs, and
+separate D5/D6 from their answer areas without changing meaning.
 
-For each item:
+## Stable field map
 
-1. Select the region that best contains the visual evidence supporting your judgement.
-2. Describe only what you can directly see in the selected region.
-3. Choose the stage that best describes the plant from the provided options.
-4. Explain why the visible image evidence supports that stage.
-5. Select the main judgement source: image evidence, prior plant-observation
-   experience, learned knowledge, guessing, or other.
-6. Record confidence from 1 (low) to 5 (high), review, and commit.
+| Section | Fields |
+| --- | --- |
+| A | `A1`, `A2`, `A3`, `A4`, `A5`, `A6`, `A6_INFO` |
+| B | `B1`, `B2`, `B3`, `B4`, `B5`, `B5_CONFIDENCE` |
+| C | `C1`, `C2`, `C3`, `C4`, `C5`, `C6` |
+| D | `D1`, `D2`, `D3`, `D4`, `D_CONFIDENCE`, `D5`, `D6` |
+| E | `E1`, `E2`, `E3`, `E3_WHY`, `E4` |
 
-The observation response concerns visible evidence. The bounded stage choice records
-the participant's judgement separately. The required initial reasoning fields are
-stored as `visual_evidence_reason` and `judgement_source`; they are collected before
-the first commit and are not part of the post-reveal reflection.
+`D_CONFIDENCE` is an independent field after D4. D5 records when help would have
+been wanted and why; D6 records the desired kind of help. E is released only after
+all three linked SeasonLens prototype items are complete.
 
-## Path-specific reflection
+All questionnaire responses may be skipped, matching the participant notice.
+Confidence fields accept 1–5 or blank. Choice values are stable language-neutral
+codes; labels remain bilingual.
 
-- **Initially correct; no recorded hint exposure:** “刚才观察植物时，有没有什么地方让你觉得不确定？如果有，是什么？”
-- **At least one recorded hint exposure:** “提示是否帮助你注意到或理解了之前没有发现的植物特征？如果有，你学到了什么？”
+## Observation material IDs
 
-Only the applicable prompt is shown. The hint prompt is open-ended and permits
-participants to report that the hint did not help. Visibility follows recorded
-hint exposure, not inferred correctness.
+- B: `B_COMPLETE_PLANT_001`
+- C earlier: `C_SAME_PLANT_T1_001`
+- C current: `C_SAME_PLANT_T2_001`
+- D: `D_CHALLENGING_PLANT_001`
 
-## Post-task formative questions
+The PNG bytes were extracted directly from the authoritative DOCX without
+re-encoding. The schema records the DOCX relationship ID, package path, and SHA-256
+for each file. No species identification or external substitute has been added.
 
-These questions form an **external post-task questionnaire**. They are study
-materials, not fields implemented in the SeasonLens website. The website implements
-only the in-flow, path-specific reflection above.
+## Unaided-stage guarantee
 
-Use a 1–5 agreement scale unless marked open response.
-
-1. The region-selection instruction was clear.
-2. It was clear that the observation box asked for visible features rather than a stage answer.
-3. The available stage choices were understandable.
-4. The sequence of steps was easy to follow.
-5. The expert reveal was easy to compare with my response.
-6. When guidance appeared, it directed my attention without simply giving me the answer. *(Ask only if guidance was received.)*
-7. What, if anything, was confusing about selecting a region? *(Open response.)*
-8. What, if anything, was confusing about describing visible evidence? *(Open response.)*
-9. What, if anything, was confusing about choosing a stage? *(Open response.)*
-10. What would you change about the guidance, reveal, or reflection? *(Open response.)*
-
-## Researcher note
-
-Group B is a visible but incomplete formative placeholder. Do not describe it to participants or reviewers as full yoked matching. The current prototype uses deterministic rule-based diagnosis and a frozen authored hint library; it does not generate ecological answers with an LLM or vision model.
+B, C, and D are questionnaire-only stages. Their public projections contain no
+correct answer, expert region, target region, scoring result, diagnosis, or hint.
+Backend stage checks prevent early access, and only an authenticated researcher
+with a valid CSRF token can release the next stage.
