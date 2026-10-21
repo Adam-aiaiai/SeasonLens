@@ -67,6 +67,18 @@ class ApiTests(unittest.TestCase):
         except HTTPError as error:
             return error.code, error.read().decode(), error.headers
 
+    def request_bytes(self, path, *, researcher=False):
+        headers = {}
+        if researcher:
+            headers["Cookie"] = self.researcher_cookie
+            headers["X-CSRF-Token"] = self.csrf
+        request = Request(self.base + path, headers=headers)
+        try:
+            with urlopen(request, timeout=5) as response:
+                return response.status, response.read(), response.headers
+        except HTTPError as error:
+            return error.code, error.read(), error.headers
+
     def create(self):
         status, text, _ = self.request("/api/sessions", {"participant_id": "api-test"})
         self.assertEqual(status, 201)
@@ -177,8 +189,28 @@ class ApiTests(unittest.TestCase):
         participant = json.loads(text)
         self.assertEqual(participant["stage"], "B")
         self.assertNotIn("diagnostic", text.lower())
+        self.assertEqual(self.request("/api/researcher/studies")[0], 401)
+        status, text, _ = self.request("/api/researcher/studies", researcher=True)
+        self.assertEqual(status, 200)
+        self.assertIn(study_id, [row["study_id"] for row in json.loads(text)])
+        self.assertEqual(self.request(f"/api/researcher/studies/{study_id}")[0], 401)
+        status, text, _ = self.request(f"/api/researcher/studies/{study_id}", researcher=True)
+        self.assertEqual(status, 200)
+        detail = json.loads(text)
+        self.assertEqual(detail["questionnaire_version"], "3.1")
+        self.assertEqual(detail["material_set_version"], "3.1")
+        self.assertEqual(detail["study_mode"], "self_guided")
         self.assertEqual(self.request(f"/api/researcher/studies/{study_id}/export.json")[0], 401)
         status, text, headers = self.request(f"/api/researcher/studies/{study_id}/export.json", researcher=True)
         self.assertEqual(status, 200)
         self.assertIn("attachment", headers["Content-Disposition"])
         self.assertEqual(json.loads(text)["study"]["participant_id"], "F-HTTP")
+        status, payload, _ = self.request_bytes(
+            f"/api/researcher/studies/{study_id}/export.csv", researcher=True)
+        self.assertEqual(status, 200)
+        self.assertIn(b"questionnaire_version", payload)
+        for suffix in ("export.xlsx", "export.zip"):
+            status, payload, _ = self.request_bytes(
+                f"/api/researcher/studies/{study_id}/{suffix}", researcher=True)
+            self.assertEqual(status, 200)
+            self.assertTrue(payload.startswith(b"PK"))

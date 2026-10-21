@@ -293,6 +293,9 @@ class FormativeStudyService:
         study = self._require_study(study_id)
         result = deepcopy(study)
         result.pop("resume_token_hash", None)
+        result["questionnaire_version"] = result["config"]["questionnaire_version"]
+        result["material_set_version"] = result["config"]["material_set_version"]
+        result["study_mode"] = result["config"]["study_mode"]
         result["events"] = self.repository.events_for_study(study_id)
         return result
 

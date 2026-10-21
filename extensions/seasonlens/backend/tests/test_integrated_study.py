@@ -133,6 +133,18 @@ class IntegratedStudyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "disabled"):
             self.studies.start_prototype(study_id, token)
 
+    def test_researcher_detail_has_stable_version_fields_for_v3_and_v3_1(self):
+        current_id, _, _ = self.create()
+        legacy_id, _, _ = self.create(legacy=True)
+        current = self.studies.researcher_detail(current_id)
+        legacy = self.studies.researcher_detail(legacy_id)
+        self.assertEqual((current["questionnaire_version"], current["material_set_version"],
+                          current["study_mode"]), ("3.1", "3.1", "self_guided"))
+        self.assertEqual((legacy["questionnaire_version"], legacy["material_set_version"],
+                          legacy["study_mode"]), (3, 3, "researcher_assisted"))
+        self.assertEqual(current["config"]["questionnaire_version"], current["questionnaire_version"])
+        self.assertEqual(legacy["config"]["questionnaire_version"], legacy["questionnaire_version"])
+
     def test_migration_marks_preexisting_study_as_legacy_without_changing_stage(self):
         legacy_path = Path(self.directory.name) / "legacy.db"
         connection = sqlite3.connect(legacy_path)

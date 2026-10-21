@@ -14,6 +14,32 @@ async function api(path, options = {}) {
 
 function status(message, error = false) { statusBox.textContent = message; statusBox.classList.toggle("error", error); }
 
+function normalizeStudyDetail(value) {
+  if (!value || typeof value !== "object" || typeof value.study_id !== "string") {
+    throw new Error("The server returned an invalid study record.");
+  }
+  const config = value.config && typeof value.config === "object" ? value.config : null;
+  const questionnaireVersion = value.questionnaire_version ?? config?.questionnaire_version ?? 3;
+  const materialSetVersion = value.material_set_version ?? config?.material_set_version ?? 3;
+  const studyMode = value.study_mode ?? config?.study_mode ?? "researcher_assisted";
+  if (!Array.isArray(value.responses) || !Array.isArray(value.materials)
+      || !Array.isArray(value.prototype_sessions) || !Array.isArray(value.events)) {
+    throw new Error("The study record is incomplete. Restart the local server and try again.");
+  }
+  return {
+    ...value,
+    questionnaire_version: questionnaireVersion,
+    material_set_version: materialSetVersion,
+    study_mode: studyMode,
+    config: {
+      ...(config || {}),
+      questionnaire_version: questionnaireVersion,
+      material_set_version: materialSetVersion,
+      study_mode: studyMode,
+    },
+  };
+}
+
 function login() {
   app.innerHTML = `<div class="login-panel"><p class="eyebrow">Secure access</p><h2>Researcher sign in</h2><form id="login-form"><label>Username<input id="username" autocomplete="username" required></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Sign in</button></form><p class="commit-note">The legacy debug header and <code>?debug=1</code> do not grant access.</p></div>`;
   document.querySelector("#login-form").addEventListener("submit", async event => {
@@ -26,12 +52,18 @@ function login() {
 }
 
 async function listStudies() {
-  const studies = await api("/api/researcher/studies");
-  app.innerHTML = `<div class="dashboard-heading"><div><p class="eyebrow">Study operations</p><h2>Participants and progress</h2></div><div><button id="refresh" class="quiet-button">Refresh</button> <button id="logout" class="quiet-button">Sign out</button></div></div>
-    <div class="table-scroll"><table class="study-table"><thead><tr><th>Participant</th><th>Study</th><th>Stage</th><th>Prototype items</th><th>Updated (UTC)</th><th></th></tr></thead><tbody>${studies.map(row => `<tr><td>${escapeHtml(row.participant_id)}</td><td><code>${escapeHtml(row.study_id)}</code></td><td>${escapeHtml(row.stage)}</td><td>${escapeHtml(row.prototype_session_count)}</td><td>${escapeHtml(row.updated_at)}</td><td><button class="open-study" data-id="${escapeHtml(row.study_id)}">Open</button></td></tr>`).join("") || '<tr><td colspan="6">No studies yet.</td></tr>'}</tbody></table></div>`;
-  document.querySelector("#refresh").addEventListener("click", listStudies);
-  document.querySelector("#logout").addEventListener("click", async () => { await api("/api/researcher/logout", { method: "POST", body: "{}" }); csrf = ""; login(); });
-  document.querySelectorAll(".open-study").forEach(button => button.addEventListener("click", () => openStudy(button.dataset.id)));
+  try {
+    const studies = await api("/api/researcher/studies");
+    if (!Array.isArray(studies)) throw new Error("The server returned an invalid study list.");
+    app.innerHTML = `<div class="dashboard-heading"><div><p class="eyebrow">Study operations</p><h2>Participants and progress</h2></div><div><button id="refresh" class="quiet-button">Refresh</button> <button id="logout" class="quiet-button">Sign out</button></div></div>
+      <div class="table-scroll"><table class="study-table"><thead><tr><th>Participant</th><th>Study</th><th>Stage</th><th>Prototype items</th><th>Updated (UTC)</th><th></th></tr></thead><tbody>${studies.map(row => `<tr><td>${escapeHtml(row.participant_id)}</td><td><code>${escapeHtml(row.study_id)}</code></td><td>${escapeHtml(row.stage)}</td><td>${escapeHtml(row.prototype_session_count)}</td><td>${escapeHtml(row.updated_at)}</td><td><button class="open-study" data-id="${escapeHtml(row.study_id)}">Open</button></td></tr>`).join("") || '<tr><td colspan="6">No studies yet.</td></tr>'}</tbody></table></div>`;
+    document.querySelector("#refresh").addEventListener("click", listStudies);
+    document.querySelector("#logout").addEventListener("click", async () => {
+      try { await api("/api/researcher/logout", { method: "POST", body: "{}" }); csrf = ""; login(); }
+      catch (error) { status(`Unable to sign out: ${error.message}`, true); }
+    });
+    document.querySelectorAll(".open-study").forEach(button => button.addEventListener("click", () => openStudy(button.dataset.id)));
+  } catch (error) { status(`Unable to load studies: ${error.message}`, true); }
 }
 
 function responsePanels(study) {
@@ -47,20 +79,23 @@ function materialPanels(study) {
 }
 
 async function openStudy(id) {
-  currentStudy = await api(`/api/researcher/studies/${id}`);
-  const canRelease = currentStudy.stage.startsWith("WAIT_");
-  app.innerHTML = `<div class="dashboard-heading"><div><p class="eyebrow">${escapeHtml(currentStudy.participant_id)}</p><h2>Study record</h2><p><code>${escapeHtml(currentStudy.study_id)}</code></p></div><button id="back" class="quiet-button">Back</button></div>
-    <div class="researcher-grid"><section><h3>Progress</h3><dl class="reveal-grid"><dt>Stage</dt><dd>${escapeHtml(currentStudy.stage)}</dd><dt>Record version</dt><dd>${escapeHtml(currentStudy.version)}</dd><dt>Questionnaire</dt><dd>${escapeHtml(currentStudy.config.questionnaire_version)}</dd><dt>Materials</dt><dd>${escapeHtml(currentStudy.config.material_set_version)}</dd><dt>Study mode</dt><dd>${escapeHtml(currentStudy.config.study_mode)}</dd><dt>Created UTC</dt><dd>${escapeHtml(currentStudy.created_at)}</dd><dt>Updated UTC</dt><dd>${escapeHtml(currentStudy.updated_at)}</dd></dl>${canRelease ? '<button id="release">Release next stage</button>' : ""}</section>
-    <section><h3>Study exports</h3><div class="export-links">${[["export.json","Combined JSON"],["export.csv","Combined CSV"],["export.xlsx","XLSX"],["export.zip","Complete ZIP"],["questionnaire.json","Questionnaire JSON"],["questionnaire.csv","Questionnaire CSV"]].map(([path,label]) => `<a class="button-link quiet" href="/api/researcher/studies/${escapeHtml(id)}/${path}">${label}</a>`).join("")}</div></section></div>
-    <form id="metadata-form" class="attempt-summary"><h3>Researcher metadata</h3><label>Researcher ID<input name="researcher_id" value="${escapeHtml(currentStudy.researcher_metadata.researcher_id || "")}"></label><label>Manual study date<input name="study_date_manual" value="${escapeHtml(currentStudy.researcher_metadata.study_date_manual || "")}"></label><label>Notes<textarea name="notes">${escapeHtml(currentStudy.researcher_metadata.notes || "")}</textarea></label><button type="submit">Save metadata</button></form>
-    <h3>Questionnaire responses</h3>${responsePanels(currentStudy)}
-    <details class="response-panel"><summary>Material configuration and provenance</summary><p class="commit-note">Only project-controlled asset paths are accepted. Released materials are immutable.</p>${materialPanels(currentStudy)}</details>
-    <details class="response-panel"><summary>Prototype sessions</summary><pre>${escapeHtml(JSON.stringify(currentStudy.prototype_sessions, null, 2))}</pre></details>
-    <details class="response-panel"><summary>Study event history</summary><pre>${escapeHtml(JSON.stringify(currentStudy.events, null, 2))}</pre></details>`;
-  document.querySelector("#back").addEventListener("click", listStudies);
-  document.querySelector("#release")?.addEventListener("click", releaseStage);
-  document.querySelector("#metadata-form").addEventListener("submit", saveMetadata);
-  document.querySelectorAll(".material-config").forEach(form => form.addEventListener("submit", saveMaterial));
+  try {
+    currentStudy = normalizeStudyDetail(await api(`/api/researcher/studies/${id}`));
+    const canRelease = currentStudy.stage.startsWith("WAIT_");
+    app.innerHTML = `<div class="dashboard-heading"><div><p class="eyebrow">${escapeHtml(currentStudy.participant_id)}</p><h2>Study record</h2><p><code>${escapeHtml(currentStudy.study_id)}</code></p></div><button id="back" class="quiet-button">Back</button></div>
+      <div class="researcher-grid"><section><h3>Progress</h3><dl class="reveal-grid"><dt>Stage</dt><dd>${escapeHtml(currentStudy.stage)}</dd><dt>Record version</dt><dd>${escapeHtml(currentStudy.version)}</dd><dt>Questionnaire</dt><dd>${escapeHtml(currentStudy.questionnaire_version)}</dd><dt>Materials</dt><dd>${escapeHtml(currentStudy.material_set_version)}</dd><dt>Study mode</dt><dd>${escapeHtml(currentStudy.study_mode)}</dd><dt>Created UTC</dt><dd>${escapeHtml(currentStudy.created_at)}</dd><dt>Updated UTC</dt><dd>${escapeHtml(currentStudy.updated_at)}</dd></dl>${canRelease ? '<button id="release">Release next stage</button>' : ""}</section>
+      <section><h3>Study exports</h3><div class="export-links">${[["export.json","Combined JSON"],["export.csv","Combined CSV"],["export.xlsx","XLSX"],["export.zip","Complete ZIP"],["questionnaire.json","Questionnaire JSON"],["questionnaire.csv","Questionnaire CSV"]].map(([path,label]) => `<a class="button-link quiet" href="/api/researcher/studies/${escapeHtml(id)}/${path}">${label}</a>`).join("")}</div></section></div>
+      <form id="metadata-form" class="attempt-summary"><h3>Researcher metadata</h3><label>Researcher ID<input name="researcher_id" value="${escapeHtml(currentStudy.researcher_metadata.researcher_id || "")}"></label><label>Manual study date<input name="study_date_manual" value="${escapeHtml(currentStudy.researcher_metadata.study_date_manual || "")}"></label><label>Notes<textarea name="notes">${escapeHtml(currentStudy.researcher_metadata.notes || "")}</textarea></label><button type="submit">Save metadata</button></form>
+      <h3>Questionnaire responses</h3>${responsePanels(currentStudy)}
+      <details class="response-panel"><summary>Material configuration and provenance</summary><p class="commit-note">Only project-controlled asset paths are accepted. Released materials are immutable.</p>${materialPanels(currentStudy)}</details>
+      <details class="response-panel"><summary>Prototype sessions</summary><pre>${escapeHtml(JSON.stringify(currentStudy.prototype_sessions, null, 2))}</pre></details>
+      <details class="response-panel"><summary>Study event history</summary><pre>${escapeHtml(JSON.stringify(currentStudy.events, null, 2))}</pre></details>`;
+    document.querySelector("#back").addEventListener("click", listStudies);
+    document.querySelector("#release")?.addEventListener("click", releaseStage);
+    document.querySelector("#metadata-form").addEventListener("submit", saveMetadata);
+    document.querySelectorAll(".material-config").forEach(form => form.addEventListener("submit", saveMaterial));
+    status("");
+  } catch (error) { status(`Unable to open study: ${error.message}`, true); }
 }
 
 async function saveMaterial(event) {
