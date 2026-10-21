@@ -4,6 +4,7 @@ import argparse
 import json
 import mimetypes
 import os
+import socket
 import sys
 from http import HTTPStatus
 from http.cookies import SimpleCookie
@@ -27,6 +28,17 @@ SERVICE = SeasonLensService(export_directory=EXPORT_ROOT, repository=REPOSITORY)
 STUDIES = FormativeStudyService(REPOSITORY, SERVICE)
 AUTH = ResearcherAuth(REPOSITORY)
 SERVICE_LOCK = RLock()
+
+
+class SeasonLensHTTPServer(ThreadingHTTPServer):
+    """Prevent two Windows processes from silently sharing the study port."""
+
+    allow_reuse_address = False
+
+    def server_bind(self) -> None:
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
 
 class SeasonLensHandler(BaseHTTPRequestHandler):
@@ -347,7 +359,7 @@ def main() -> None:
     parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     args = parser.parse_args()
-    server = ThreadingHTTPServer((args.host, args.port), SeasonLensHandler)
+    server = SeasonLensHTTPServer((args.host, args.port), SeasonLensHandler)
     print(f"SeasonLens: http://{args.host}:{args.port}")
     print(f"Database: {'PostgreSQL' if REPOSITORY._postgres else REPOSITORY.database_url}")
     if not AUTH.configured:

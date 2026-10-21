@@ -1,6 +1,7 @@
 """HTTP contract checks using the existing stdlib server and a temporary log directory."""
 import importlib.util
 import json
+import socket
 import tempfile
 import threading
 import unittest
@@ -83,6 +84,14 @@ class ApiTests(unittest.TestCase):
         status, text, _ = self.request("/api/sessions", {"participant_id": "api-test"})
         self.assertEqual(status, 201)
         return json.loads(text)["data"]["session_id"]
+
+    def test_production_server_uses_exclusive_port_binding(self):
+        server = self.api.SeasonLensHTTPServer(("127.0.0.1", 0), self.api.SeasonLensHandler)
+        self.addCleanup(server.server_close)
+        self.assertFalse(server.allow_reuse_address)
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.assertEqual(
+                server.socket.getsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE), 1)
 
     def test_catalog_and_researcher_mode_gate(self):
         status, text, _ = self.request("/api/items")
