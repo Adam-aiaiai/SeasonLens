@@ -214,3 +214,53 @@ class ApiTests(unittest.TestCase):
                 f"/api/researcher/studies/{study_id}/{suffix}", researcher=True)
             self.assertEqual(status, 200)
             self.assertTrue(payload.startswith(b"PK"))
+
+    def test_completed_participant_can_start_fresh_study_without_changing_old_record(self):
+        status, text, headers = self.request(
+            "/api/studies", {"participant_id": "F-FIRST", "consent_acknowledged": True})
+        self.assertEqual(status, 201)
+        current = json.loads(text)
+        first_id = current["study_id"]
+        self.participant_cookie = headers["Set-Cookie"].split(";", 1)[0]
+        for expected_stage in ("B", "C", "D", "E", "COMPLETE"):
+            status, text, _ = self.request(
+                f"/api/studies/{first_id}/submit",
+                {"version": current["version"], "values": {}}, participant=True)
+            self.assertEqual(status, 200)
+            current = json.loads(text)
+            self.assertEqual(current["stage"], expected_stage)
+
+        status, text, headers = self.request("/api/studies/new", {}, participant=True)
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(text)["version"], "3.1")
+        self.assertIn("Max-Age=0", headers["Set-Cookie"])
+        self.participant_cookie = ""
+        self.assertEqual(self.request("/api/studies/current", participant=True)[0], 401)
+
+        # Resetting an already-cleared browser session is idempotent and creates no rows.
+        self.assertEqual(self.request("/api/studies/new", {})[0], 200)
+        status, text, _ = self.request("/api/researcher/studies", researcher=True)
+        self.assertEqual(status, 200)
+        self.assertEqual([row["study_id"] for row in json.loads(text)], [first_id])
+
+        status, text, headers = self.request(
+            "/api/studies", {"participant_id": "F-SECOND", "consent_acknowledged": True})
+        self.assertEqual(status, 201)
+        second = json.loads(text)
+        second_id = second["study_id"]
+        self.assertNotEqual(second_id, first_id)
+        self.assertEqual(second["stage"], "A")
+        self.assertEqual(second["draft"], {})
+        self.assertEqual(second["study_mode"], "self_guided")
+        self.participant_cookie = headers["Set-Cookie"].split(";", 1)[0]
+
+        status, text, _ = self.request(
+            f"/api/researcher/studies/{first_id}", researcher=True)
+        self.assertEqual(status, 200)
+        first = json.loads(text)
+        self.assertEqual(first["stage"], "COMPLETE")
+        self.assertEqual(first["participant_id"], "F-FIRST")
+        self.assertEqual(len([row for row in first["responses"] if row["submitted_at"]]), 5)
+        status, text, _ = self.request("/api/researcher/studies", researcher=True)
+        self.assertEqual(status, 200)
+        self.assertEqual({row["study_id"] for row in json.loads(text)}, {first_id, second_id})

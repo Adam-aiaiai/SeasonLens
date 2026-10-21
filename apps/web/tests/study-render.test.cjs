@@ -12,7 +12,9 @@ const escaped = value => String(value).replaceAll("&", "&amp;").replaceAll("<", 
 class Element {
   constructor() {
     this.hidden = false;
+    this.disabled = false;
     this.textContent = "";
+    this.listeners = {};
     this.classList = { toggle() {} };
     this._innerHTML = "";
     this.spans = [];
@@ -25,18 +27,20 @@ class Element {
     }));
   }
   get innerHTML() { return this._innerHTML; }
+  addEventListener(name, handler) { this.listeners[name] = handler; }
   querySelectorAll(selector) { return selector === "span" ? this.spans : []; }
+  querySelector() { return null; }
 }
 
-function fixture() {
+function fixture(fetchImpl = async () => ({ ok: false, status: 401, json: async () => ({ error: "signed out" }) })) {
   const elements = {
     "#study-app": new Element(),
     "#status": new Element(),
     "#study-progress": new Element(),
   };
   const context = vm.createContext({
-    document: { querySelector: selector => elements[selector] || new Element() },
-    fetch: async () => ({ ok: false, status: 401, json: async () => ({ error: "signed out" }) }),
+    document: { querySelector: selector => elements[selector] ||= new Element() },
+    fetch: fetchImpl,
     setTimeout, clearTimeout, FormData: class {}, console,
   });
   const source = readFileSync(join(__dirname, "../study.js"), "utf8").replace(/\nresume\(\);\s*$/, "\n");
@@ -82,4 +86,50 @@ test("all v3.1 A-E fields and B-D materials render with their authored shapes", 
       assert.ok(html.includes(image.material_id));
     }
   }
+});
+
+test("completion starts one fresh consent flow even when clicked repeatedly", async () => {
+  let requests = 0;
+  const config = { participant_notice: { zh: "新测试说明", en: "New study notice" } };
+  const f = fixture(async (path, options) => {
+    requests += 1;
+    assert.equal(path, "/api/studies/new");
+    assert.equal(options.method, "POST");
+    return { ok: true, status: 200, json: async () => config };
+  });
+  f.run("renderComplete()");
+  assert.match(f.elements["#study-app"].innerHTML, /开始新的测试 \/ Start New Study/);
+  const button = f.elements["#start-new-study"];
+  const event = { currentTarget: button };
+  await Promise.all([button.listeners.click(event), button.listeners.click(event)]);
+  assert.equal(requests, 1);
+  assert.match(f.elements["#study-app"].innerHTML, /Welcome \/ 欢迎/);
+  assert.match(f.elements["#study-app"].innerHTML, /新测试说明/);
+  assert.ok(f.elements["#start-study-form"].listeners.submit);
+});
+
+test("repeated welcome submission creates only one new study run", async () => {
+  let creates = 0;
+  const config = { participant_notice: { zh: "说明", en: "Notice" } };
+  const projection = {
+    study_id: "new-study-id", participant_id: "F-NEW", stage: "A", version: 0,
+    study_mode: "self_guided", progress: { completed: [], current: "A", stages: ["A", "B", "C", "D", "E"] },
+    section: schema.sections.A, draft: {}, updated_at: "2026-01-01T00:00:00Z",
+  };
+  const f = fixture(async path => {
+    assert.equal(path, "/api/studies");
+    creates += 1;
+    return { ok: true, status: 201, json: async () => projection };
+  });
+  f.context.config = config;
+  f.run("renderWelcome(config)");
+  f.elements["#participant-id"] = new Element();
+  f.elements["#consent-acknowledged"] = new Element();
+  f.elements["#participant-id"].value = "F-NEW";
+  f.elements["#consent-acknowledged"].checked = true;
+  const form = f.elements["#start-study-form"];
+  const event = { preventDefault() {}, currentTarget: form };
+  await Promise.all([form.listeners.submit(event), form.listeners.submit(event)]);
+  assert.equal(creates, 1);
+  assert.match(f.elements["#study-app"].innerHTML, /Section A/);
 });

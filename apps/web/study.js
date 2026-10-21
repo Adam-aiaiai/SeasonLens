@@ -4,6 +4,8 @@ const progress = document.querySelector("#study-progress");
 let study = null;
 let saveTimer = null;
 let saving = false;
+let creatingStudy = false;
+let startingNewStudy = false;
 const SELF_GUIDED_PROGRESS_STAGES = ["A", "B", "C", "D", "E"];
 const ASSISTED_PROGRESS_STAGES = ["A", "B", "C", "D", "PROTOTYPE", "E"];
 
@@ -45,6 +47,8 @@ function normalizeStudyResponse(value) {
 }
 
 function renderWelcome(config) {
+  creatingStudy = false;
+  startingNewStudy = false;
   progress.hidden = true;
   app.innerHTML = `<div class="introduction bilingual-intro">
     <p class="eyebrow">Welcome / 欢迎</p><h2>SeasonLens 形成性研究</h2>
@@ -59,11 +63,19 @@ function renderWelcome(config) {
   </div>`;
   document.querySelector("#start-study-form").addEventListener("submit", async event => {
     event.preventDefault();
+    if (creatingStudy) return;
+    creatingStudy = true;
+    const submit = event.currentTarget.querySelector('button[type="submit"]');
+    if (submit) submit.disabled = true;
     try {
       setStatus("正在创建研究记录… / Creating study record…");
       study = normalizeStudyResponse(await api("/api/studies", { method: "POST", body: JSON.stringify({ participant_id: document.querySelector("#participant-id").value.trim(), consent_acknowledged: document.querySelector("#consent-acknowledged").checked }) }));
       render();
-    } catch (error) { setStatus(error.message, true); }
+    } catch (error) {
+      creatingStudy = false;
+      if (submit) submit.disabled = false;
+      setStatus(error.message, true);
+    }
   });
 }
 
@@ -179,7 +191,25 @@ function renderPrototype() {
 }
 
 function renderComplete() {
-  app.innerHTML = `<div class="success"><p class="eyebrow">Complete / 完成</p><h2>感谢您的参与！</h2><p lang="en">Thank you for your participation!</p><p>完整研究记录已安全保存。 / The complete study record has been saved.</p></div>`;
+  app.innerHTML = `<div class="success"><p class="eyebrow">Complete / 完成</p><h2>感谢您的参与！</h2><p lang="en">Thank you for your participation!</p><p>完整研究记录已安全保存。 / The complete study record has been saved.</p><button id="start-new-study" type="button">开始新的测试 / Start New Study</button></div>`;
+  document.querySelector("#start-new-study").addEventListener("click", startNewStudy);
+}
+
+async function startNewStudy(event) {
+  if (startingNewStudy) return;
+  startingNewStudy = true;
+  event.currentTarget.disabled = true;
+  clearTimeout(saveTimer);
+  try {
+    const config = await api("/api/studies/new", { method: "POST", body: "{}" });
+    study = null;
+    setStatus("");
+    renderWelcome(config);
+  } catch (error) {
+    startingNewStudy = false;
+    event.currentTarget.disabled = false;
+    setStatus(`无法开始新的测试 / Unable to start a new study: ${error.message}`, true);
+  }
 }
 
 function render() {

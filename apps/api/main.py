@@ -112,6 +112,10 @@ class SeasonLensHandler(BaseHTTPRequestHandler):
         try:
             path = urlparse(self.path).path
             body = self._read_json()
+            if path == "/api/studies/new":
+                self._json(STUDIES.public_config(), headers={
+                    "Set-Cookie": self._cookie("seasonlens_participant", "", max_age=0)})
+                return
             if path == "/api/studies":
                 projection, token = STUDIES.create(
                     str(body.get("participant_id", "")),
