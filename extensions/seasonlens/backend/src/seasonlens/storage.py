@@ -11,6 +11,15 @@ from typing import Any, Iterator
 from shared_platform import Actor, ActorType, EventEnvelope, StateSnapshot
 
 
+LEGACY_STUDY_CONFIG = {
+    "instrument_id": "SeasonLens_Formative_Participant_Questionnaire_v3_Bilingual",
+    "questionnaire_version": 3,
+    "material_set_version": 3,
+    "study_mode": "researcher_assisted",
+    "enable_prototype_stage": True,
+}
+
+
 def _json(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
 
@@ -78,7 +87,8 @@ class PersistentRepository:
                 resume_token_hash TEXT NOT NULL, stage TEXT NOT NULL,
                 version INTEGER NOT NULL, created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL, completed_at TEXT,
-                researcher_metadata_json TEXT NOT NULL
+                researcher_metadata_json TEXT NOT NULL,
+                config_json TEXT NOT NULL DEFAULT '{}'
             )""",
             """CREATE TABLE IF NOT EXISTS study_responses (
                 study_id TEXT NOT NULL, section_id TEXT NOT NULL,
@@ -118,10 +128,26 @@ class PersistentRepository:
         with self.transaction() as cursor:
             for statement in statements:
                 cursor.execute(statement)
+            if self._postgres:
+                cursor.execute("""SELECT 1 FROM information_schema.columns
+                    WHERE table_name='studies' AND column_name='config_json'""")
+                has_config = cursor.fetchone() is not None
+            else:
+                cursor.execute("PRAGMA table_info(studies)")
+                has_config = any(row[1] == "config_json" for row in cursor.fetchall())
+            if not has_config:
+                cursor.execute("ALTER TABLE studies ADD COLUMN config_json TEXT NOT NULL DEFAULT '{}'")
+            cursor.execute(self._sql(
+                "UPDATE studies SET config_json=? WHERE config_json IS NULL OR config_json='' OR config_json='{}'"
+            ), (_json(LEGACY_STUDY_CONFIG),))
             cursor.execute(self._sql(
                 "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?) "
                 "ON CONFLICT(version) DO NOTHING"
             ), (1, datetime.utcnow().isoformat() + "Z"))
+            cursor.execute(self._sql(
+                "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?) "
+                "ON CONFLICT(version) DO NOTHING"
+            ), (2, datetime.utcnow().isoformat() + "Z"))
 
     def close(self) -> None:
         with self._lock:
@@ -182,10 +208,11 @@ class PersistentRepository:
         with self.transaction() as cursor:
             cursor.execute(self._sql("""INSERT INTO studies
                 (study_id, participant_id, resume_token_hash, stage, version, created_at,
-                 updated_at, completed_at, researcher_metadata_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"""),
+                 updated_at, completed_at, researcher_metadata_json, config_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""),
                 (study["study_id"], study["participant_id"], study["resume_token_hash"], study["stage"],
-                 study["version"], study["created_at"], study["updated_at"], None, _json({})))
+                 study["version"], study["created_at"], study["updated_at"], None, _json({}),
+                 _json(study["config"])))
             cursor.execute(self._sql("""INSERT INTO study_responses
                 (study_id, section_id, task_index, draft_json, response_json, started_at, submitted_at)
                 VALUES (?, 'A', 0, '{}', NULL, ?, NULL)"""), (study["study_id"], study["created_at"]))
@@ -211,6 +238,7 @@ class PersistentRepository:
                            (study_id,))
             sessions = self._rows(cursor)
         study["researcher_metadata"] = json.loads(study.pop("researcher_metadata_json"))
+        study["config"] = json.loads(study.pop("config_json"))
         study["responses"] = [{**row, "draft": json.loads(row.pop("draft_json")),
                                "response": json.loads(row.pop("response_json")) if row["response_json"] else None}
                               for row in responses]
@@ -254,6 +282,12 @@ class PersistentRepository:
             cursor.execute(self._sql("""UPDATE study_responses SET draft_json=?, response_json=?, submitted_at=?
                 WHERE study_id=? AND section_id=? AND task_index=0"""),
                 (_json(response), _json(response), submitted_at, study_id, section_id))
+            if next_stage in {"B", "C", "D", "E"}:
+                cursor.execute(self._sql("""INSERT INTO study_responses
+                    (study_id, section_id, task_index, draft_json, response_json, started_at, submitted_at)
+                    VALUES (?, ?, 0, '{}', NULL, ?, NULL)
+                    ON CONFLICT(study_id, section_id, task_index) DO NOTHING"""),
+                    (study_id, next_stage, submitted_at))
             self._insert_event(cursor, event)
             return True
 

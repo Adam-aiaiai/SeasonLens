@@ -20,10 +20,12 @@ from .storage import PersistentRepository
 
 STAGE_SEQUENCE = ("A", "WAIT_B", "B", "WAIT_C", "C", "WAIT_D", "D",
                   "WAIT_PROTOTYPE", "PROTOTYPE", "E", "COMPLETE")
+SELF_GUIDED_SEQUENCE = ("A", "B", "C", "D", "E", "COMPLETE")
 WAIT_RELEASES = {"WAIT_B": "B", "WAIT_C": "C", "WAIT_D": "D",
                  "WAIT_PROTOTYPE": "PROTOTYPE"}
-SUBMIT_TRANSITIONS = {"A": "WAIT_B", "B": "WAIT_C", "C": "WAIT_D",
-                      "D": "WAIT_PROTOTYPE", "E": "COMPLETE"}
+ASSISTED_TRANSITIONS = {"A": "WAIT_B", "B": "WAIT_C", "C": "WAIT_D",
+                        "D": "WAIT_PROTOTYPE", "E": "COMPLETE"}
+SELF_GUIDED_TRANSITIONS = {"A": "B", "B": "C", "C": "D", "D": "E", "E": "COMPLETE"}
 METADATA_FIELDS = {
     "A": {"STUDY_DATE_MANUAL"},
     "B": {"B_STATION_ID", "B_START_TIME_MANUAL"},
@@ -53,16 +55,18 @@ class FormativeStudyService:
         self.repository = repository
         self.prototype = prototype
         self.clock = clock
-        path = schema_path or Path(__file__).resolve().parents[3] / "data" / "formative_questionnaire_v3.json"
+        data_root = Path(__file__).resolve().parents[3] / "data"
+        path = schema_path or data_root / "formative_questionnaire_v3_1.json"
         self.schema = json.loads(path.read_text(encoding="utf-8"))
-        self._field_specs = {
-            section: {field["id"]: field for field in value["fields"]}
-            for section, value in self.schema["sections"].items()
-        }
+        legacy_path = data_root / "formative_questionnaire_v3.json"
+        legacy = json.loads(legacy_path.read_text(encoding="utf-8")) if legacy_path != path else self.schema
+        self.schemas = {str(legacy["version"]): legacy, str(self.schema["version"]): self.schema}
 
     def public_config(self) -> dict[str, Any]:
         return {"instrument_id": self.schema["instrument_id"], "version": self.schema["version"],
-                "participant_notice": deepcopy(self.schema["participant_notice"])}
+                "participant_notice": deepcopy(self.schema["participant_notice"]),
+                "study_mode": self.schema["study_defaults"]["study_mode"],
+                "enable_prototype_stage": self.schema["study_defaults"]["enable_prototype_stage"]}
 
     def create(self, participant_id: str, *, consent_acknowledged: bool = False) -> tuple[dict[str, Any], str]:
         participant_id = participant_id.strip()
@@ -73,17 +77,22 @@ class FormativeStudyService:
         study_id = str(uuid4())
         token = secrets.token_urlsafe(32)
         now = self.clock()
+        config = {"instrument_id": self.schema["instrument_id"],
+                  "questionnaire_version": self.schema["version"],
+                  "material_set_version": self.schema["material_set_version"],
+                  **self.schema["study_defaults"]}
         materials = {
             section: {"section_id": section, "task_index": 0, "images": deepcopy(images),
+                      "material_set_version": self.schema["material_set_version"],
                       **self._default_material_metadata(section, images)}
             for section, images in self.schema["materials"].items()
         }
         study = {"study_id": study_id, "participant_id": participant_id,
                  "resume_token_hash": token_hash(token), "stage": "A", "version": 0,
-                 "created_at": now, "updated_at": now}
+                 "created_at": now, "updated_at": now, "config": config}
         self.repository.create_study(study, materials, self._event(
             study_id, "study.created", participant_id,
-            {"participant_id": participant_id, "instrument_id": self.schema["instrument_id"],
+            {"participant_id": participant_id, **config,
              "consent_acknowledged": True, "consent_acknowledged_at": now}, now))
         return self.participant_projection(study_id, token), token
 
@@ -106,14 +115,17 @@ class FormativeStudyService:
     def participant_projection(self, study_id: str, token: str) -> dict[str, Any]:
         study = self.authenticate_participant(study_id, token)
         stage = study["stage"]
+        schema = self._schema_for(study)
         result: dict[str, Any] = {
             "study_id": study_id, "participant_id": study["participant_id"],
             "stage": stage, "version": study["version"], "updated_at": study["updated_at"],
-            "progress": self._progress(stage), "prototype_sessions": [row["session_id"] for row in study["prototype_sessions"]],
+            "progress": self._progress(stage, study["config"]),
+            "study_mode": study["config"]["study_mode"],
+            "prototype_sessions": [row["session_id"] for row in study["prototype_sessions"]],
         }
-        if stage in self.schema["sections"]:
+        if stage in schema["sections"]:
             response = next((entry for entry in study["responses"] if entry["section_id"] == stage), None)
-            result["section"] = deepcopy(self.schema["sections"][stage])
+            result["section"] = deepcopy(schema["sections"][stage])
             result["draft"] = deepcopy(response["draft"] if response else {})
             result["started_at"] = response["started_at"] if response else None
             if stage in {"B", "C", "D"}:
@@ -134,18 +146,24 @@ class FormativeStudyService:
         return result
 
     @staticmethod
-    def _progress(stage: str) -> dict[str, Any]:
-        position = STAGE_SEQUENCE.index(stage)
-        completed = [name for name in ("A", "B", "C", "D", "PROTOTYPE", "E")
-                     if STAGE_SEQUENCE.index(name) < position]
-        return {"completed": completed, "current": stage}
+    def _progress(stage: str, config: dict[str, Any]) -> dict[str, Any]:
+        if config["study_mode"] == "self_guided":
+            stages = ["A", "B", "C", "D", "E"]
+            position = SELF_GUIDED_SEQUENCE.index(stage)
+            completed = [name for name in stages if SELF_GUIDED_SEQUENCE.index(name) < position]
+        else:
+            stages = ["A", "B", "C", "D", "PROTOTYPE", "E"]
+            position = STAGE_SEQUENCE.index(stage)
+            completed = [name for name in stages if STAGE_SEQUENCE.index(name) < position]
+        return {"stages": stages, "completed": completed, "current": stage}
 
     def save_draft(self, study_id: str, token: str, version: int, values: dict[str, Any]) -> dict[str, Any]:
         study = self.authenticate_participant(study_id, token)
         section = study["stage"]
-        if section not in self._field_specs:
+        schema = self._schema_for(study)
+        if section not in schema["sections"]:
             raise ValueError("There is no participant questionnaire draft at the current stage.")
-        clean = self._validate_values(section, values)
+        clean = self._validate_values(schema, section, values)
         now = self.clock()
         success = self.repository.update_draft(study_id, section, clean, version, now,
             self._event(study_id, "questionnaire.draft-saved", study["participant_id"],
@@ -157,11 +175,13 @@ class FormativeStudyService:
     def submit(self, study_id: str, token: str, version: int, values: dict[str, Any]) -> dict[str, Any]:
         study = self.authenticate_participant(study_id, token)
         section = study["stage"]
-        if section not in SUBMIT_TRANSITIONS:
+        transitions = (SELF_GUIDED_TRANSITIONS if study["config"]["study_mode"] == "self_guided"
+                       else ASSISTED_TRANSITIONS)
+        if section not in transitions:
             raise ValueError("The current stage cannot be submitted.")
-        clean = self._validate_values(section, values)
+        clean = self._validate_values(self._schema_for(study), section, values)
         now = self.clock()
-        next_stage = SUBMIT_TRANSITIONS[section]
+        next_stage = transitions[section]
         success = self.repository.submit_section(study_id, section, clean, next_stage, version, now,
             self._event(study_id, "questionnaire.section-submitted", study["participant_id"],
                         {"section_id": section, "next_stage": next_stage, "field_ids": sorted(clean)}, now))
@@ -169,10 +189,11 @@ class FormativeStudyService:
             raise ValueError("This study changed in another window. Reload before submitting again.")
         return self.participant_projection(study_id, token)
 
-    def _validate_values(self, section: str, values: dict[str, Any]) -> dict[str, Any]:
+    def _validate_values(self, schema: dict[str, Any], section: str,
+                         values: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(values, dict):
             raise ValueError("Questionnaire values must be an object.")
-        specs = self._field_specs[section]
+        specs = {field["id"]: field for field in schema["sections"][section]["fields"]}
         allowed = set(specs) | METADATA_FIELDS[section]
         if set(values) - allowed:
             raise ValueError(f"Unexpected field IDs for Section {section}.")
@@ -213,6 +234,8 @@ class FormativeStudyService:
 
     def release(self, study_id: str, version: int, researcher: str) -> dict[str, Any]:
         study = self._require_study(study_id)
+        if study["config"]["study_mode"] == "self_guided":
+            raise ValueError("Self-guided studies do not require researcher release.")
         next_stage = WAIT_RELEASES.get(study["stage"])
         if not next_stage:
             raise ValueError("The study is not waiting for researcher release.")
@@ -226,6 +249,8 @@ class FormativeStudyService:
 
     def start_prototype(self, study_id: str, token: str) -> dict[str, Any]:
         study = self.authenticate_participant(study_id, token)
+        if not study["config"]["enable_prototype_stage"]:
+            raise ValueError("The prototype stage is disabled for this study.")
         if study["stage"] != "PROTOTYPE":
             raise ValueError("The prototype has not been released for this study.")
         if study["prototype_sessions"]:
@@ -311,6 +336,7 @@ class FormativeStudyService:
             if not hmac.compare_digest(actual_hash, image["sha256"].upper()):
                 raise ValueError(f"SHA-256 does not match the configured asset: {image['material_id']}")
         clean = {"section_id": section, "task_index": 0, "images": images,
+                 "material_set_version": study["config"]["material_set_version"],
                  **self._default_material_metadata(section, images)}
         now = self.clock()
         if not self.repository.update_material(study_id, section, clean, version, now,
@@ -321,6 +347,7 @@ class FormativeStudyService:
 
     def combined_export(self, study_id: str) -> dict[str, Any]:
         study = self.researcher_detail(study_id)
+        schema = self._schema_for(study)
         prototype_logs = [self.prototype.export_study_log(row["session_id"])
                           for row in study["prototype_sessions"]]
         questionnaire = {entry["section_id"]: {
@@ -328,9 +355,13 @@ class FormativeStudyService:
             "submitted_at": entry["submitted_at"], "response": entry["response"], "draft": entry["draft"]}
             for entry in study["responses"]}
         return {
-            "export_version": 1, "instrument_id": self.schema["instrument_id"],
+            "export_version": 2, "instrument_id": schema["instrument_id"],
+            "questionnaire_version": study["config"]["questionnaire_version"],
+            "material_set_version": study["config"]["material_set_version"],
+            "study_mode": study["config"]["study_mode"],
             "study": {key: study[key] for key in ("study_id", "participant_id", "stage", "version",
-                                                   "created_at", "updated_at", "completed_at", "researcher_metadata")},
+                                                   "created_at", "updated_at", "completed_at", "researcher_metadata",
+                                                   "config")},
             "questionnaire": questionnaire, "materials": study["materials"],
             "prototype_session_ids": [row["session_id"] for row in study["prototype_sessions"]],
             "prototype_sessions": prototype_logs, "study_events": study["events"],
@@ -338,13 +369,18 @@ class FormativeStudyService:
 
     def questionnaire_export(self, study_id: str) -> dict[str, Any]:
         combined = self.combined_export(study_id)
-        return {key: combined[key] for key in ("export_version", "instrument_id", "study", "questionnaire", "materials", "study_events")}
+        return {key: combined[key] for key in ("export_version", "instrument_id", "questionnaire_version",
+                                               "material_set_version", "study_mode", "study", "questionnaire",
+                                               "materials", "study_events")}
 
     def export_csv(self, study_id: str, *, questionnaire_only: bool = False) -> str:
         value = self.questionnaire_export(study_id) if questionnaire_only else self.combined_export(study_id)
         flat: dict[str, Any] = {"study_id": value["study"]["study_id"],
                                 "participant_id": value["study"]["participant_id"],
-                                "stage": value["study"]["stage"]}
+                                "stage": value["study"]["stage"],
+                                "questionnaire_version": value["questionnaire_version"],
+                                "material_set_version": value["material_set_version"],
+                                "study_mode": value["study_mode"]}
         for section, record in value["questionnaire"].items():
             for field_id, answer in (record.get("response") or record.get("draft") or {}).items():
                 flat[field_id] = answer
@@ -400,6 +436,13 @@ class FormativeStudyService:
         if not study:
             raise ValueError("Unknown study.")
         return study
+
+    def _schema_for(self, study: dict[str, Any]) -> dict[str, Any]:
+        version = str(study["config"]["questionnaire_version"])
+        try:
+            return self.schemas[version]
+        except KeyError as error:
+            raise ValueError(f"Unsupported questionnaire version: {version}") from error
 
     @staticmethod
     def _event(study_id: str, event_type: str, actor_id: str,
