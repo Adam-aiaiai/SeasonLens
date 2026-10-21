@@ -32,6 +32,11 @@ Python 3.11 or later is required. SQLite is used by default:
 python apps/api/main.py
 ```
 
+When started through this entry point, the server loads the repository-root
+`.env` file before initializing the database and researcher authentication.
+Variables explicitly supplied by the parent process take precedence over `.env`;
+the file never overwrites deployment or shell configuration.
+
 Set researcher credentials before using the dashboard. Generate a password hash:
 
 ```powershell

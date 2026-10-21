@@ -15,6 +15,37 @@ from typing import Any
 from urllib.parse import unquote, urlparse
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+
+
+def load_local_environment(path: Path) -> tuple[str, ...]:
+    """Load a local .env without replacing explicit process configuration."""
+
+    if not path.is_file():
+        return ()
+    loaded: list[str] = []
+    for line_number, raw_line in enumerate(path.read_text(encoding="utf-8-sig").splitlines(), 1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[7:].lstrip()
+        name, separator, value = line.partition("=")
+        name = name.strip()
+        if (not separator or not name or name[0].isdigit()
+                or not all(character.isalnum() or character == "_" for character in name)):
+            raise ValueError(f"Invalid environment entry at {path}:{line_number}.")
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {'\"', "'"}:
+            value = value[1:-1]
+        if name not in os.environ:
+            os.environ[name] = value
+            loaded.append(name)
+    return tuple(loaded)
+
+
+if __name__ == "__main__":
+    load_local_environment(REPOSITORY_ROOT / ".env")
+
 sys.path.insert(0, str(REPOSITORY_ROOT / "packages" / "backend-core" / "src"))
 sys.path.insert(0, str(REPOSITORY_ROOT / "extensions" / "seasonlens" / "backend" / "src"))
 

@@ -1,6 +1,7 @@
 """HTTP contract checks using the existing stdlib server and a temporary log directory."""
 import importlib.util
 import json
+import os
 import socket
 import tempfile
 import threading
@@ -9,6 +10,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+from unittest.mock import patch
 
 from seasonlens import FormativeStudyService, PersistentRepository, ResearcherAuth, SeasonLensService
 
@@ -92,6 +94,27 @@ class ApiTests(unittest.TestCase):
         if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
             self.assertEqual(
                 server.socket.getsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE), 1)
+
+    def test_local_env_loader_preserves_hash_characters_and_process_precedence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            env_path = Path(directory) / ".env"
+            env_path.write_text(
+                "SEASONLENS_TEST_FILE_VALUE=pbkdf2_sha256$600000$salt$digest\n"
+                "SEASONLENS_TEST_OVERRIDE=file-value\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {"SEASONLENS_TEST_OVERRIDE": "process-value"}):
+                os.environ.pop("SEASONLENS_TEST_FILE_VALUE", None)
+                try:
+                    loaded = self.api.load_local_environment(env_path)
+                    self.assertEqual(
+                        os.environ["SEASONLENS_TEST_FILE_VALUE"],
+                        "pbkdf2_sha256$600000$salt$digest",
+                    )
+                    self.assertEqual(os.environ["SEASONLENS_TEST_OVERRIDE"], "process-value")
+                    self.assertEqual(loaded, ("SEASONLENS_TEST_FILE_VALUE",))
+                finally:
+                    os.environ.pop("SEASONLENS_TEST_FILE_VALUE", None)
 
     def test_catalog_and_researcher_mode_gate(self):
         status, text, _ = self.request("/api/items")
