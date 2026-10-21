@@ -1,4 +1,4 @@
-# SeasonLens MVP server
+# SeasonLens integrated study server
 
 From the repository root:
 
@@ -6,18 +6,18 @@ From the repository root:
 python apps/api/main.py
 ```
 
-Open <http://127.0.0.1:8000>. No third-party server dependency is required for
-this MVP. The API composition root imports the existing shared backend core and
-the SeasonLens extension directly from their source trees.
+Open <http://127.0.0.1:8000>. SQLite is used locally unless `DATABASE_URL` selects
+PostgreSQL. The API composition root imports the shared backend core and SeasonLens
+extension directly from their source trees.
 
-Each mutation writes a JSON snapshot and append-only event trace to
-`runtime-data/seasonlens/`. Add `?debug=1` to the web URL for researcher controls,
-manual authored hint overrides, notes, reset, and JSON/CSV downloads. Researcher
-endpoints (`/researcher`, `/log`, `/log.csv`, hint override, notes, reset) require
-the `X-SeasonLens-Researcher: 1` header sent by that UI. This local debug gate is
-not authentication; keep the default localhost binding for demonstrations.
+The integrated participant route is `/`, the backward-compatible standalone
+prototype is `/prototype.html`, and the authenticated researcher dashboard is
+`/researcher.html`. Configure `SEASONLENS_RESEARCHER_USERNAME` and
+`SEASONLENS_RESEARCHER_PASSWORD_HASH`; the old debug header is not accepted.
 
 `GET /api/items` lists public authored item views. Completing the current item
 enables **Next item**, which starts a linked session for the next item without
 overwriting earlier responses or logs. See [SEASONLENS_MVP.md](../../SEASONLENS_MVP.md)
-for the full formative-study workflow, item schema, logging, checks, and limitations.
+for the prototype item schema and logging. See
+[FORMATIVE_STUDY_PLATFORM.md](../../docs/FORMATIVE_STUDY_PLATFORM.md) for database,
+authentication, migration, export, researcher, and Railway instructions.

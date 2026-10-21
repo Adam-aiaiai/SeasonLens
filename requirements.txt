@@ -1,1 +1,2 @@
-# SeasonLens currently uses Python standard library only.
+# PostgreSQL driver used when Railway provides DATABASE_URL.
+psycopg[binary]>=3.2,<4

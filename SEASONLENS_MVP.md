@@ -15,8 +15,9 @@ Run from the repository root:
 python apps/api/main.py
 ```
 
-Python 3.11+ is the only runtime dependency. Open <http://127.0.0.1:8000> for the
-participant interface, or <http://127.0.0.1:8000/?debug=1> for researcher mode.
+Python 3.11+ is required. Open <http://127.0.0.1:8000> for the integrated
+participant study, <http://127.0.0.1:8000/prototype.html> for the standalone
+prototype, or <http://127.0.0.1:8000/researcher.html> for researcher access.
 The participant introduction requests an anonymous study code such as `F01`; use
 study codes rather than names. The introduction appears once when a new formative
 session is started and is not repeated between linked items.
@@ -216,7 +217,8 @@ and `state_version` identifies the current state snapshot.
 
 ## Researcher controls
 
-Open `?debug=1`, then expand **Researcher controls and study log**. The panel shows
+Sign in at `/researcher.html`. An authenticated prototype debug panel can also be
+requested with `?debug=1`; it stays hidden without a valid researcher session. The panel shows
 session/participant/item IDs, current backend stage, independent diagnostic checks,
 actual hint and level, initial and revised responses side by side, confidence,
 reflection, and a full JSON log containing timestamps and stage transitions.
@@ -254,10 +256,9 @@ Semantic diagnostic fields and authored distractor metadata stay exclusively in
 the researcher API; the participant only receives the actual authored hint content
 and the existing public hint fields.
 
-Researcher endpoints require `X-SeasonLens-Researcher: 1`, sent by the debug UI.
-This is a local demonstration-mode gate, **not authentication or authorization**.
-Use the default localhost binding. A participant can deliberately enable debug
-mode; studies needing access separation require a later authenticated researcher surface.
+Researcher endpoints require a server-side researcher session in an HttpOnly,
+SameSite cookie. Mutations also require the session CSRF token. The former debug
+header is not accepted, and `?debug=1` grants no authorization by itself.
 
 ## Logs and API
 
@@ -312,8 +313,7 @@ in-memory runtime, and invalid submissions/transitions leave state and events in
 
 Every new item/session receives a UUID, so consecutive participants and linked items
 write distinct JSON filenames rather than overwriting earlier sessions. Sessions
-remain in memory; server restart retains exported files but does not
-restore or resume live sessions. There is no database, full Group B yoking,
+are persisted in SQLite or PostgreSQL and restore across process restarts. There is no full Group B yoking,
 counterbalancing, randomization, cross-item fading, LLM scoring/hints, delayed transfer
 study, or statistical analysis. Validate content and calibrate region overlap before
 a controlled experiment. Pointer accessibility and real-browser visual checks still

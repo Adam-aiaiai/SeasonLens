@@ -7,7 +7,7 @@ from copy import deepcopy
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 from uuid import uuid4
 
 from shared_platform import (
@@ -38,6 +38,9 @@ from .domain import (
     diagnostic_reason,
 )
 
+if TYPE_CHECKING:
+    from .storage import PersistentRepository
+
 
 TRAINING_MODE = "training"
 UNAIDED_TEST_MODE = "unaided_test"
@@ -58,12 +61,14 @@ class SeasonLensService:
         *,
         export_directory: Path | None = None,
         clock: Callable[[], str] = _utc_now,
+        repository: "PersistentRepository | None" = None,
     ) -> None:
         self.catalog = DemoItemCatalog()
         self.states = InMemoryStateStore()
         self.events = InMemoryEventStore()
         self.clock = clock
         self.export_directory = export_directory
+        self.repository = repository
 
         extension = SeasonLensExtension()
         registry = Registry()
@@ -563,6 +568,14 @@ class SeasonLensService:
         try:
             return self.states.get(EXTENSION_ID, session_id)
         except KeyError as error:
+            if self.repository is not None:
+                restored = self.repository.load_prototype_session(session_id)
+                if restored is not None:
+                    snapshot, events = restored
+                    self.states.snapshots[(EXTENSION_ID, session_id)] = snapshot
+                    existing = {event.event_id for event in self.events.events}
+                    self.events.events.extend(event for event in events if event.event_id not in existing)
+                    return snapshot
             raise ValueError(f"Unknown session: {session_id}") from error
 
     def _human_action(
@@ -630,11 +643,15 @@ class SeasonLensService:
         return value
 
     def _persist(self, session_id: str) -> None:
-        if self.export_directory is None:
-            return
-        self.export_directory.mkdir(parents=True, exist_ok=True)
-        target = self.export_directory / f"{session_id}.json"
-        target.write_text(
-            json.dumps(self.export_study_log(session_id), indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
+        if self.repository is not None:
+            state = self._state(session_id)
+            events = [self._event_dict(event) for event in self.events.events
+                      if event.session_id == session_id]
+            self.repository.save_prototype_session(state, events, self.clock())
+        if self.export_directory is not None:
+            self.export_directory.mkdir(parents=True, exist_ok=True)
+            target = self.export_directory / f"{session_id}.json"
+            target.write_text(
+                json.dumps(self.export_study_log(session_id), indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )

@@ -14,12 +14,18 @@ from .domain import (
     validate_region_selection,
 )
 from .service import SeasonLensService
+from .storage import PersistentRepository
+from .study import FormativeStudyService
+from .auth import ResearcherAuth, password_hash
 
 __all__ = [
     "CONDITION",
     "EXTENSION_ID",
     "DemoItemCatalog",
     "DifficultyCode",
+    "FormativeStudyService",
+    "PersistentRepository",
+    "ResearcherAuth",
     "SeasonLensService",
     "SeasonLensStage",
     "classify_difficulty",
@@ -30,4 +36,5 @@ __all__ = [
     "select_hint_from_library",
     "select_hint_decision",
     "validate_region_selection",
+    "password_hash",
 ]

@@ -9,7 +9,7 @@ from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from seasonlens import SeasonLensService
+from seasonlens import FormativeStudyService, PersistentRepository, ResearcherAuth, SeasonLensService
 
 
 class ApiTests(unittest.TestCase):
@@ -34,11 +34,30 @@ class ApiTests(unittest.TestCase):
     def setUp(self) -> None:
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
-        self.api.SERVICE = SeasonLensService(export_directory=Path(self.directory.name))
+        repository = PersistentRepository(f"sqlite:///{Path(self.directory.name) / 'test.db'}")
+        self.addCleanup(repository.close)
+        self.api.REPOSITORY = repository
+        self.api.SERVICE = SeasonLensService(export_directory=Path(self.directory.name), repository=repository)
+        self.api.STUDIES = FormativeStudyService(repository, self.api.SERVICE)
+        self.api.AUTH = ResearcherAuth(repository, username="researcher", development_password="test-password")
+        self.researcher_cookie = ""
+        self.participant_cookie = ""
+        self.csrf = ""
+        status, text, headers = self.request("/api/researcher/login", {"username": "researcher", "password": "test-password"})
+        self.assertEqual(status, 200)
+        self.researcher_cookie = headers["Set-Cookie"].split(";", 1)[0]
+        self.csrf = json.loads(text)["csrf_token"]
 
-    def request(self, path, body=None, *, researcher=False):
+    def request(self, path, body=None, *, researcher=False, participant=False):
         headers = {"Content-Type": "application/json"}
-        if researcher: headers["X-SeasonLens-Researcher"] = "1"
+        cookies = []
+        if researcher:
+            cookies.append(self.researcher_cookie)
+            headers["X-CSRF-Token"] = self.csrf
+        if participant:
+            cookies.append(self.participant_cookie)
+        if cookies:
+            headers["Cookie"] = "; ".join(cookies)
         request = Request(self.base + path, data=json.dumps(body).encode() if body is not None else None,
                           headers=headers)
         try:
@@ -62,10 +81,10 @@ class ApiTests(unittest.TestCase):
         ])
         session_id = self.create()
         for suffix in ["log", "researcher", "log.csv"]:
-            self.assertEqual(self.request(f"/api/sessions/{session_id}/{suffix}")[0], 403)
+            self.assertEqual(self.request(f"/api/sessions/{session_id}/{suffix}")[0], 401)
             self.assertEqual(self.request(f"/api/sessions/{session_id}/{suffix}", researcher=True)[0], 200)
         for suffix in ["hint-override", "researcher-notes", "reset"]:
-            self.assertEqual(self.request(f"/api/sessions/{session_id}/{suffix}", {}, researcher=False)[0], 403)
+            self.assertEqual(self.request(f"/api/sessions/{session_id}/{suffix}", {}, researcher=False)[0], 401)
 
     def test_http_flow_override_notes_and_exports(self):
         session_id = self.create()
@@ -136,3 +155,30 @@ class ApiTests(unittest.TestCase):
         log = json.loads(text)
         self.assertEqual(log["initial_selected_semantic_region"], "large_leaf_region")
         self.assertEqual(log["revised_selected_semantic_region"], "upper_bud_region")
+
+    def test_integrated_study_cookie_release_and_export_security(self):
+        status, text, headers = self.request("/api/studies", {"participant_id": "F-HTTP", "consent_acknowledged": True})
+        self.assertEqual(status, 201)
+        created = json.loads(text)
+        study_id = created["study_id"]
+        self.participant_cookie = headers["Set-Cookie"].split(";", 1)[0]
+        status, text, _ = self.request(f"/api/studies/{study_id}/submit",
+                                      {"version": created["version"], "values": {"A6": "never"}}, participant=True)
+        waiting = json.loads(text)
+        self.assertEqual(waiting["stage"], "WAIT_B")
+        self.assertNotIn("material", waiting)
+        self.assertEqual(self.request(f"/api/researcher/studies/{study_id}/release",
+                                      {"version": waiting["version"]})[0], 401)
+        status, text, _ = self.request(f"/api/researcher/studies/{study_id}/release",
+                                      {"version": waiting["version"]}, researcher=True)
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(text)["stage"], "B")
+        status, text, _ = self.request(f"/api/studies/{study_id}", participant=True)
+        participant = json.loads(text)
+        self.assertEqual(participant["stage"], "B")
+        self.assertNotIn("diagnostic", text.lower())
+        self.assertEqual(self.request(f"/api/researcher/studies/{study_id}/export.json")[0], 401)
+        status, text, headers = self.request(f"/api/researcher/studies/{study_id}/export.json", researcher=True)
+        self.assertEqual(status, 200)
+        self.assertIn("attachment", headers["Content-Disposition"])
+        self.assertEqual(json.loads(text)["study"]["participant_id"], "F-HTTP")
