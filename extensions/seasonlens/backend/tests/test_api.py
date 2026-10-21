@@ -156,7 +156,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(log["initial_selected_semantic_region"], "large_leaf_region")
         self.assertEqual(log["revised_selected_semantic_region"], "upper_bud_region")
 
-    def test_integrated_study_cookie_release_and_export_security(self):
+    def test_integrated_study_cookie_self_guided_and_export_security(self):
         status, text, headers = self.request("/api/studies", {"participant_id": "F-HTTP", "consent_acknowledged": True})
         self.assertEqual(status, 201)
         created = json.loads(text)
@@ -164,15 +164,15 @@ class ApiTests(unittest.TestCase):
         self.participant_cookie = headers["Set-Cookie"].split(";", 1)[0]
         status, text, _ = self.request(f"/api/studies/{study_id}/submit",
                                       {"version": created["version"], "values": {"A6": "never"}}, participant=True)
-        waiting = json.loads(text)
-        self.assertEqual(waiting["stage"], "WAIT_B")
-        self.assertNotIn("material", waiting)
+        participant = json.loads(text)
+        self.assertEqual(participant["stage"], "B")
+        self.assertEqual(participant["study_mode"], "self_guided")
+        self.assertEqual(participant["material"]["images"][0]["image_path"],
+                         "/assets/real/anemone_virginiana_001.jpg")
         self.assertEqual(self.request(f"/api/researcher/studies/{study_id}/release",
-                                      {"version": waiting["version"]})[0], 401)
-        status, text, _ = self.request(f"/api/researcher/studies/{study_id}/release",
-                                      {"version": waiting["version"]}, researcher=True)
-        self.assertEqual(status, 200)
-        self.assertEqual(json.loads(text)["stage"], "B")
+                                      {"version": participant["version"]})[0], 401)
+        self.assertEqual(self.request(f"/api/researcher/studies/{study_id}/release",
+                                      {"version": participant["version"]}, researcher=True)[0], 409)
         status, text, _ = self.request(f"/api/studies/{study_id}", participant=True)
         participant = json.loads(text)
         self.assertEqual(participant["stage"], "B")

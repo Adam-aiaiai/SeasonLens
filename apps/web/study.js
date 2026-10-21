@@ -36,7 +36,6 @@ function renderWelcome(config) {
       <label class="metadata-field checkbox-label"><input id="consent-acknowledged" type="checkbox" required> 我已阅读以上研究信息并同意开始。 / I have read the study information above and agree to begin.</label>
       <button type="submit">开始 / Begin</button>
     </form>
-    <p><a href="/prototype.html">Standalone SeasonLens prototype / 独立原型</a></p>
   </div>`;
   document.querySelector("#start-study-form").addEventListener("submit", async event => {
     event.preventDefault();
@@ -52,6 +51,8 @@ function updateProgress() {
   progress.hidden = false;
   const completed = new Set(study.progress.completed);
   const current = study.stage.startsWith("WAIT_") ? study.stage.replace("WAIT_", "") : study.stage;
+  progress.innerHTML = study.progress.stages.map(stage =>
+    `<span data-stage="${escapeHtml(stage)}">${stage === "PROTOTYPE" ? "SeasonLens" : escapeHtml(stage)}</span>`).join("");
   progress.querySelectorAll("span").forEach(element => {
     const stage = element.dataset.stage;
     element.classList.toggle("done", completed.has(stage));
@@ -95,7 +96,9 @@ function renderSection() {
         ${section.fields.map(field => questionField(field, study.draft)).join("")}
         ${section.closing ? `<div class="instruction-panel closing">${bilingual(section.closing)}</div>` : ""}
         <div class="form-actions"><button type="button" id="save-draft" class="quiet-button">保存草稿 / Save draft</button><button type="submit">提交本部分 / Submit section</button></div>
-        <p class="commit-note">所有问题均可跳过。提交后由研究员释放下一观察阶段。 / Every question may be skipped. The researcher releases the next observation stage.</p>
+        <p class="commit-note">${study.study_mode === "self_guided"
+          ? "所有问题均可跳过。提交后将直接进入下一部分。 / Every question may be skipped. After submission, the next section begins immediately."
+          : "所有问题均可跳过。提交后由研究员释放下一观察阶段。 / Every question may be skipped. The researcher releases the next observation stage."}</p>
       </form></div>`;
   const form = document.querySelector("#section-form");
   form.addEventListener("input", scheduleDraft);
@@ -110,7 +113,7 @@ function valuesFromForm() {
   for (const element of form.elements) {
     if (!element.name) continue;
     if (element.type === "checkbox") values[element.name] = element.checked;
-    else if (element.tagName === "SELECT" && element.name.endsWith("CONFIDENCE") || element.name === "C5") values[element.name] = element.value ? Number(element.value) : null;
+    else if (element.tagName === "SELECT" && (element.name.endsWith("CONFIDENCE") || element.name === "C5")) values[element.name] = element.value ? Number(element.value) : null;
     else values[element.name] = element.value || null;
   }
   return values;
