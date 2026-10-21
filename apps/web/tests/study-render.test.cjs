@@ -93,8 +93,9 @@ test("completion starts one fresh consent flow even when clicked repeatedly", as
   const config = { participant_notice: { zh: "新测试说明", en: "New study notice" } };
   const f = fixture(async (path, options) => {
     requests += 1;
-    assert.equal(path, "/api/studies/new");
-    assert.equal(options.method, "POST");
+    assert.equal(path, "/api/study-config");
+    assert.equal(options.method, undefined);
+    assert.equal(options.headers["Content-Type"], "application/json");
     return { ok: true, status: 200, json: async () => config };
   });
   f.run("renderComplete()");
@@ -106,6 +107,22 @@ test("completion starts one fresh consent flow even when clicked repeatedly", as
   assert.match(f.elements["#study-app"].innerHTML, /Welcome \/ 欢迎/);
   assert.match(f.elements["#study-app"].innerHTML, /新测试说明/);
   assert.ok(f.elements["#start-study-form"].listeners.submit);
+});
+
+test("new-study configuration failure restores the retained button after currentTarget clears", async () => {
+  let finishRequest;
+  const response = new Promise(resolve => { finishRequest = resolve; });
+  const f = fixture(async () => response);
+  f.run("renderComplete()");
+  const button = f.elements["#start-new-study"];
+  const event = { currentTarget: button };
+  const click = button.listeners.click(event);
+  event.currentTarget = null;
+  finishRequest({ ok: false, status: 500, json: async () => ({ error: "configuration unavailable" }) });
+  await click;
+  assert.equal(button.disabled, false);
+  assert.match(f.elements["#status"].textContent,
+    /无法开始新的测试 \/ Unable to start a new study: configuration unavailable/);
 });
 
 test("repeated welcome submission creates only one new study run", async () => {

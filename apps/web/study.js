@@ -198,16 +198,17 @@ function renderComplete() {
 async function startNewStudy(event) {
   if (startingNewStudy) return;
   startingNewStudy = true;
-  event.currentTarget.disabled = true;
+  const button = event.currentTarget;
+  button.disabled = true;
   clearTimeout(saveTimer);
   try {
-    const config = await api("/api/studies/new", { method: "POST", body: "{}" });
+    const config = await api("/api/study-config");
     study = null;
     setStatus("");
     renderWelcome(config);
   } catch (error) {
     startingNewStudy = false;
-    event.currentTarget.disabled = false;
+    button.disabled = false;
     setStatus(`无法开始新的测试 / Unable to start a new study: ${error.message}`, true);
   }
 }

@@ -230,21 +230,24 @@ class ApiTests(unittest.TestCase):
             current = json.loads(text)
             self.assertEqual(current["stage"], expected_stage)
 
-        status, text, headers = self.request("/api/studies/new", {}, participant=True)
+        # Start New Study first reads the existing public configuration; no row is
+        # created and the completed study remains the active resumable record.
+        status, text, _ = self.request("/api/study-config", participant=True)
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(text)["version"], "3.1")
-        self.assertIn("Max-Age=0", headers["Set-Cookie"])
-        self.participant_cookie = ""
-        self.assertEqual(self.request("/api/studies/current", participant=True)[0], 401)
+        status, text, _ = self.request("/api/studies/current", participant=True)
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(text)["study_id"], first_id)
 
-        # Resetting an already-cleared browser session is idempotent and creates no rows.
-        self.assertEqual(self.request("/api/studies/new", {})[0], 200)
+        # Repeated clicks only reread configuration and never create rows.
+        self.assertEqual(self.request("/api/study-config", participant=True)[0], 200)
         status, text, _ = self.request("/api/researcher/studies", researcher=True)
         self.assertEqual(status, 200)
         self.assertEqual([row["study_id"] for row in json.loads(text)], [first_id])
 
         status, text, headers = self.request(
-            "/api/studies", {"participant_id": "F-SECOND", "consent_acknowledged": True})
+            "/api/studies", {"participant_id": "F-SECOND", "consent_acknowledged": True},
+            participant=True)
         self.assertEqual(status, 201)
         second = json.loads(text)
         second_id = second["study_id"]
@@ -253,14 +256,37 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(second["draft"], {})
         self.assertEqual(second["study_mode"], "self_guided")
         self.participant_cookie = headers["Set-Cookie"].split(";", 1)[0]
-
-        status, text, _ = self.request(
-            f"/api/researcher/studies/{first_id}", researcher=True)
+        status, text, _ = self.request("/api/studies/current", participant=True)
         self.assertEqual(status, 200)
-        first = json.loads(text)
+        self.assertEqual(json.loads(text)["study_id"], second_id)
+
+        second_current = second
+        for expected_stage in ("B", "C", "D", "E", "COMPLETE"):
+            status, text, _ = self.request(
+                f"/api/studies/{second_id}/submit",
+                {"version": second_current["version"], "values": {}}, participant=True)
+            self.assertEqual(status, 200)
+            second_current = json.loads(text)
+            self.assertEqual(second_current["stage"], expected_stage)
+
+        details = {}
+        for study_id in (first_id, second_id):
+            status, text, _ = self.request(
+                f"/api/researcher/studies/{study_id}", researcher=True)
+            self.assertEqual(status, 200)
+            details[study_id] = json.loads(text)
+            for suffix in ("export.json", "export.csv", "export.xlsx", "export.zip"):
+                status, payload, _ = self.request_bytes(
+                    f"/api/researcher/studies/{study_id}/{suffix}", researcher=True)
+                self.assertEqual(status, 200)
+                self.assertTrue(payload)
+
+        first = details[first_id]
         self.assertEqual(first["stage"], "COMPLETE")
         self.assertEqual(first["participant_id"], "F-FIRST")
         self.assertEqual(len([row for row in first["responses"] if row["submitted_at"]]), 5)
+        self.assertEqual(details[second_id]["stage"], "COMPLETE")
+        self.assertEqual(details[second_id]["participant_id"], "F-SECOND")
         status, text, _ = self.request("/api/researcher/studies", researcher=True)
         self.assertEqual(status, 200)
         self.assertEqual({row["study_id"] for row in json.loads(text)}, {first_id, second_id})
