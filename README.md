@@ -1,17 +1,27 @@
 # SeasonLens
 
-SeasonLens is a formative research prototype investigating observation-first scaffolding for novice ecological noticing.
+SeasonLens is an integrated formative-study platform for investigating observation-first scaffolding and novice ecological noticing.
 
 ## Live Demo
 
 The deployed prototype can be accessed directly in a web browser:
 
 - **Participant interface:** https://seasonlens-production.up.railway.app/
-- **Researcher/debug interface:** https://seasonlens-production.up.railway.app/?debug=1
+- **Researcher interface:** https://seasonlens-production.up.railway.app/researcher.html
 
 No local installation is required for the online demo.
 
-> Note: the deployed version is intended for prototype demonstration and formative testing. Persistent database storage and authenticated researcher access are not yet implemented.
+> Repository support for PostgreSQL persistence and authenticated researcher access is implemented. Existing live deployments must be redeployed with the documented database and credential variables before those guarantees apply.
+
+## Integrated study flow
+
+```text
+Welcome/Consent → A → B → C → D → three existing SeasonLens items → E → Completion
+```
+
+B–D are backend-gated, entirely unaided stages using the four approved images from
+the authoritative bilingual questionnaire. The standalone prototype remains at
+`/prototype.html`.
 
 SeasonLens is currently deterministic: ecological facts, accepted evidence regions, stage answers, and hints are frozen authored content. Rule-based diagnosis selects an appropriate hint from that library; the prototype does not use an LLM or vision model to generate botanical answers.
 
@@ -63,6 +73,11 @@ All three use project-local whole-plant or whole-branch photographs so the parti
 - Researcher/debug panel, item switching, reset, and downloads
 - Group A answer-first behavior
 - Group C error-contingent adaptive guidance
+- Bilingual A–E questionnaire with stable field IDs and draft resume
+- Backend-enforced researcher release between unaided stages
+- SQLite/PostgreSQL persistence with startup migrations
+- Authenticated researcher dashboard with CSRF protection
+- Independent and combined JSON/CSV, XLSX, and complete ZIP exports
 
 ## Experimental conditions
 
@@ -75,9 +90,7 @@ All three use project-local whole-plant or whole-branch photographs so the parti
 - Full Group B yoked matching
 - Cross-item automatic fading
 - Ecological expert validation of content, regions, and thresholds
-- Formative participant study and calibration
 - Main experimental study
-- Persistent database and authenticated researcher access
 - Real-browser/device accessibility validation
 
 ## How to run
@@ -89,20 +102,24 @@ python apps/api/main.py
 ```
 
 - Participant: <http://127.0.0.1:8000>
-- Researcher/debug: <http://127.0.0.1:8000/?debug=1>
+- Standalone prototype: <http://127.0.0.1:8000/prototype.html>
+- Researcher: <http://127.0.0.1:8000/researcher.html>
 
 Run the checks with:
 
 ```powershell
 python scripts/check_seasonlens.py
 node --check apps/web/app.js
-node --test apps/web/tests/interaction.test.cjs
+node --check apps/web/study.js
+node --check apps/web/researcher.js
+node --test apps/web/tests/*.test.cjs
 ```
 
 See [SEASONLENS_MVP.md](SEASONLENS_MVP.md) for implementation, logging, and
 limitations, and the [formative questionnaire](docs/SEASONLENS_FORMATIVE_QUESTIONNAIRE.md)
-for the path-aligned evaluation wording.
+for the questionnaire mapping. See [the integrated platform guide](docs/FORMATIVE_STUDY_PLATFORM.md)
+for persistence, authentication, researcher workflow, exports, and Railway setup.
 
 ## Project status
 
-This repository currently represents the formative prototype rather than the final main-study system.
+This repository implements the integrated formative-study platform; ecological content validation and a final main-study protocol remain separate research tasks.

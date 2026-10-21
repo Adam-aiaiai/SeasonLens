@@ -91,6 +91,51 @@ select { width: 100%; font: inherit; padding: 10px; margin-bottom: 12px; }
 .debug-panel pre { max-height: 420px; overflow: auto; padding: 12px; background: #152019; color: #dceadc; font-size: .75rem; }
 footer { padding: 20px 0 32px; color: var(--muted); font-size: .78rem; }
 
+.quiet-link { color: var(--leaf-dark); font-weight: 700; }
+.integrated-main, .researcher-main { width: min(1180px, calc(100% - 32px)); }
+.integrated-card { min-height: 360px; }
+.study-progress { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 8px 0 18px; }
+.study-progress span { border-top: 3px solid var(--line); padding-top: 7px; color: var(--muted); text-align: center; }
+.study-progress span.done { border-color: #8fa991; color: var(--leaf); }
+.study-progress span.current { border-color: var(--leaf); color: var(--leaf-dark); font-weight: 800; }
+.section-heading { padding: 26px 28px 18px; border-bottom: 1px solid var(--line); }
+.section-heading > p { margin-bottom: 5px; }
+.instruction-panel { margin-top: 16px; padding: 16px 18px; border-left: 4px solid #7d9c82; background: #f2f6f1; }
+.instruction-panel span { display: block; }
+.questionnaire-layout { display: grid; grid-template-columns: minmax(300px, .85fr) minmax(0, 1.15fr); }
+.questionnaire-layout:not(:has(.material-panel)) { grid-template-columns: 1fr; }
+.material-panel { padding: 24px; border-right: 1px solid var(--line); background: #f3f6f0; }
+.material-panel figure { margin: 0 0 18px; }
+.material-panel img { display: block; width: 100%; max-height: 520px; object-fit: contain; border: 1px solid #c9d3ca; border-radius: 9px; background: #fff; }
+.material-panel figcaption { margin-top: 7px; color: var(--muted); font-size: .8rem; }
+.comparison-materials { display: grid; gap: 16px; align-content: start; }
+.questionnaire-form { padding: 26px 28px; }
+.question-field { margin-bottom: 24px; }
+.question-id { display: inline-block; min-width: 48px; color: var(--leaf); font-size: .82rem; letter-spacing: .05em; }
+.question-zh, .question-en { display: block; font-weight: 700; }
+.question-en { margin: 4px 0 9px; color: var(--muted); font-size: .9rem; font-weight: 500; }
+.metadata-field { margin-bottom: 18px; padding: 12px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); }
+.checkbox-label { display: flex; gap: 8px; align-items: center; }
+.form-actions, .export-links { display: flex; flex-wrap: wrap; gap: 10px; }
+.button-link { display: inline-block; border-radius: 7px; padding: 11px 16px; background: var(--leaf); color: #fff; font-weight: 700; text-decoration: none; }
+.button-link:hover { background: var(--leaf-dark); }
+.button-link.quiet { border: 1px solid var(--line); background: #fff; color: var(--leaf-dark); }
+.privacy-note { padding: 14px; border-radius: 8px; background: #f3f6f0; }
+.dashboard-heading { display: flex; justify-content: space-between; gap: 20px; align-items: start; padding: 26px; }
+.table-scroll { overflow-x: auto; padding: 0 26px 26px; }
+.study-table { width: 100%; border-collapse: collapse; }
+.study-table th, .study-table td { padding: 11px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.study-table code { overflow-wrap: anywhere; }
+.researcher-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 0 26px; }
+.researcher-grid section { padding: 18px; border: 1px solid var(--line); border-radius: 9px; }
+.researcher-main .attempt-summary, .researcher-main > .study-card > h3, .researcher-main .response-panel { margin-inline: 26px; }
+.response-panel { margin-bottom: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; }
+.response-panel summary { cursor: pointer; font-weight: 700; }
+.response-panel pre { overflow: auto; max-height: 520px; padding: 12px; background: #152019; color: #dceadc; white-space: pre-wrap; }
+.login-panel { max-width: 440px; margin: 30px auto; padding: 28px; }
+.login-panel label { margin-bottom: 16px; }
+.login-panel input { width: 100%; border: 1px solid #aebbb1; border-radius: 7px; padding: 11px; }
+
 @media (max-width: 740px) {
   .study-layout { grid-template-columns: 1fr; }
   .visual-panel { border-right: 0; border-bottom: 1px solid var(--line); }
@@ -99,4 +144,7 @@ footer { padding: 20px 0 32px; color: var(--muted); font-size: .78rem; }
   .instruction-definitions { grid-template-columns: 1fr; gap: 5px; }
   .progress span { font-size: 0; }
   .progress span::first-letter { font-size: .8rem; }
+  .questionnaire-layout, .researcher-grid { grid-template-columns: 1fr; }
+  .material-panel { border-right: 0; border-bottom: 1px solid var(--line); }
+  .dashboard-heading { flex-direction: column; }
 }

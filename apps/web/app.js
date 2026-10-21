@@ -8,7 +8,11 @@ let lastLog = null;
 let commitDraft = null;
 let items = [];
 let busy = false;
-const debugMode = new URLSearchParams(location.search).get("debug") === "1";
+const params = new URLSearchParams(location.search);
+const debugMode = params.get("debug") === "1";
+const integratedStudyId = params.get("study_id");
+let researcherMode = false;
+let researcherCsrf = "";
 const modeLabels = { training: "Training", unaided_test: "Unaided test", transfer: "Transfer" };
 const conditionLabels = {
   "answer-first": "Group A · Answer-first",
@@ -22,10 +26,6 @@ const diagnosisLabels = {
   CORRECT: "Fully correct",
 };
 
-if (debugMode) {
-  debugPanel.hidden = false;
-}
-
 const escapeHtml = (value) => String(value ?? "")
   .replaceAll("&", "&amp;")
   .replaceAll("<", "&lt;")
@@ -36,7 +36,7 @@ const escapeHtml = (value) => String(value ?? "")
 async function api(path, options = {}) {
   const response = await fetch(path, {
     ...options,
-    headers: { "Content-Type": "application/json", ...(debugMode ? { "X-SeasonLens-Researcher": "1" } : {}), ...(options.headers || {}) },
+    headers: { "Content-Type": "application/json", ...(researcherCsrf ? { "X-CSRF-Token": researcherCsrf } : {}), ...(options.headers || {}) },
   });
   const body = await response.json();
   if (!response.ok) throw new Error(body.error || `请求失败（${response.status}）`);
@@ -79,7 +79,7 @@ function showIntroduction() {
     }
     startSession(participantId);
   });
-  if (debugMode) loadItemOptions();
+  if (researcherMode) loadItemOptions();
 }
 
 async function loadItemOptions() {
@@ -109,16 +109,20 @@ async function startSession(participantId) {
   busy = true;
   document.querySelectorAll("button").forEach(button => { button.disabled = true; });
   try {
-    items = await api("/api/items");
-    const selectedItem = debugMode ? document.querySelector("#study-item")?.value : null;
-    projection = await api("/api/sessions", {
-      method: "POST",
-      body: JSON.stringify({
-        participant_id: participantId.trim(), item_id: selectedItem || items[0].item_id,
-        study_mode: debugMode ? document.querySelector("#study-mode").value : "training",
-        condition: debugMode ? document.querySelector("#study-condition").value : "observation-first-contingent",
-      }),
-    });
+    if (integratedStudyId) {
+      projection = await api(`/api/studies/${integratedStudyId}/prototype-start`, { method: "POST", body: "{}" });
+    } else {
+      items = await api("/api/items");
+      const selectedItem = researcherMode ? document.querySelector("#study-item")?.value : null;
+      projection = await api("/api/sessions", {
+        method: "POST",
+        body: JSON.stringify({
+          participant_id: participantId.trim(), item_id: selectedItem || items[0].item_id,
+          study_mode: researcherMode ? document.querySelector("#study-mode").value : "training",
+          condition: researcherMode ? document.querySelector("#study-condition").value : "observation-first-contingent",
+        }),
+      });
+    }
     selectedRegion = null;
     commitDraft = null;
     lastLog = null;
@@ -282,8 +286,9 @@ function render() {
   } else if (stage === "COMPLETE") {
     app.innerHTML = `<div class="success"><p class="eyebrow">研究日志已保存</p><h2>观察任务已完成</h2>
       <p>谢谢参与。你的回答和${projection.data.study_mode === "training" ? "训练过程中的交互" : "独立作答完成情况"}已分别记录。</p>
-      <button id="another" type="button">开始新的会话</button></div>`;
-    document.querySelector("#another").addEventListener("click", showIntroduction);
+      ${integratedStudyId ? '<button id="continue-study" type="button">继续 Section E / Continue to Section E</button>' : '<button id="another" type="button">开始新的会话</button>'}</div>`;
+    document.querySelector("#another")?.addEventListener("click", showIntroduction);
+    document.querySelector("#continue-study")?.addEventListener("click", () => { location.href = "/"; });
     if (projection.data.has_next_item) {
       const next = document.createElement("button");
       next.textContent = "下一题";
@@ -628,7 +633,7 @@ document.querySelector("#download-log").addEventListener("click", async () => {
 document.querySelector("#download-csv").addEventListener("click", async () => {
   try {
     const sessionId = projection.data.session_id;
-    const response = await fetch(`/api/sessions/${sessionId}/log.csv`, { headers: { "X-SeasonLens-Researcher": "1" } });
+    const response = await fetch(`/api/sessions/${sessionId}/log.csv`);
     if (!response.ok) throw new Error("Unable to export CSV.");
     download(await response.text(), "text/csv;charset=utf-8", "csv", sessionId);
   } catch (error) { showError(error); }
@@ -644,4 +649,24 @@ document.querySelector("#researcher-notes-form").addEventListener("submit", asyn
 });
 document.querySelector("#reset-item").addEventListener("click", () => mutate("reset"));
 
-showIntroduction();
+async function bootstrap() {
+  if (integratedStudyId) {
+    document.querySelector("#new-session").hidden = true;
+    startSession("integrated-study");
+  } else {
+    showIntroduction();
+  }
+  if (debugMode) {
+    try {
+      const session = await api("/api/researcher/me");
+      researcherMode = true;
+      researcherCsrf = session.csrf_token;
+      debugPanel.hidden = false;
+      if (!integratedStudyId) loadItemOptions();
+    } catch (_) {
+      debugPanel.hidden = true;
+    }
+  }
+}
+
+bootstrap();

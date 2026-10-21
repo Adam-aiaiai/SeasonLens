@@ -181,14 +181,15 @@ test("initial and revised forms render bounded vertical stage choices", () => {
 
 test("saving a researcher note preserves unfinished participant fields and rectangle", async () => {
   const f = fixture();
-  f.run(`projection.data.stage = "REOBSERVE"; selectedRegion = {x: 0.1, y: 0.1, width: 0.3, height: 0.3};`);
+  f.run(`projection.data.stage = "REOBSERVE"; selectedRegion = {x: 0.1, y: 0.1, width: 0.3, height: 0.3}; researcherCsrf = "csrf-test";`);
   f.node("#app").innerHTML = "Unfinished participant form";
   f.node("#observation").value = "Unsaved revision";
   await f.run('mutate("researcher-notes", {researcher_notes: "Saved note"})');
   assert.equal(f.node("#app").innerHTML, "Unfinished participant form");
   assert.equal(f.node("#observation").value, "Unsaved revision");
   assert.equal(f.run("selectedRegion.width"), 0.3);
-  assert.equal(f.requests[0].options.headers["X-SeasonLens-Researcher"], "1");
+  assert.equal(f.requests[0].options.headers["X-CSRF-Token"], "csrf-test");
+  assert.equal(f.requests[0].options.headers["X-SeasonLens-Researcher"], undefined);
 });
 
 test("researcher hint and participant response text is escaped", () => {

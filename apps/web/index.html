@@ -3,75 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SeasonLens — 观察优先研究原型</title>
+    <title>SeasonLens 形成性研究</title>
     <link rel="stylesheet" href="/styles.css" />
-    <script type="module" src="/app.js"></script>
+    <script type="module" src="/study.js"></script>
   </head>
   <body>
     <header class="site-header">
-      <div>
-        <p class="eyebrow">生态观察研究</p>
-        <h1>SeasonLens</h1>
-      </div>
-      <button id="new-session" class="quiet-button" type="button">新建会话</button>
+      <div><p class="eyebrow">生态观察研究 · Formative Study</p><h1>SeasonLens</h1></div>
+      <a class="quiet-link" href="/researcher.html">研究员 / Researcher</a>
     </header>
-    <main>
-      <nav class="progress" aria-label="研究进度">
-        <span data-step="observe">1. 观察</span>
-        <span data-step="commit">2. 提交</span>
-        <span data-step="hint">3. 提示</span>
-        <span data-step="reobserve">4. 再次观察</span>
-        <span data-step="reveal">5. 揭示</span>
-        <span data-step="reflect">6. 反思</span>
+    <main class="integrated-main">
+      <nav id="study-progress" class="study-progress" aria-label="研究进度 / Study progress" hidden>
+        <span data-stage="A">A</span><span data-stage="B">B</span><span data-stage="C">C</span>
+        <span data-stage="D">D</span><span data-stage="PROTOTYPE">SeasonLens</span><span data-stage="E">E</span>
       </nav>
       <div id="status" role="status" aria-live="polite"></div>
-      <section id="app" class="study-card" aria-live="polite">
-        <p>正在准备观察研究……</p>
+      <section id="study-app" class="study-card integrated-card" aria-live="polite">
+        <p>正在加载研究 / Loading study…</p>
       </section>
-      <details id="debug-panel" class="debug-panel" hidden>
-        <summary>Researcher controls and study log</summary>
-        <div class="researcher-config attempt-summary">
-          <h3>New-session study configuration</h3>
-          <label for="study-mode">Study mode</label>
-          <select id="study-mode">
-            <option value="training">Training — conditional guidance, reveal, reflection</option>
-            <option value="unaided_test">Unaided test — no guidance or reveal</option>
-            <option value="transfer">Transfer — unfamiliar item, no guidance or reveal</option>
-          </select>
-          <label for="study-condition">Experimental condition</label>
-          <select id="study-condition">
-            <option value="answer-first">Group A — Answer-first</option>
-            <option value="observation-first-yoked">Group B — Yoked guidance (planned / not fully implemented)</option>
-            <option value="observation-first-contingent" selected>Group C — Error-contingent adaptive guidance</option>
-          </select>
-          <label for="study-item">Observation item</label>
-          <select id="study-item">
-            <option value="">Loading authored items…</option>
-          </select>
-          <p class="commit-note">Selections apply when starting a new session. Unaided modes suppress guidance regardless of group.</p>
-        </div>
-        <div class="debug-actions">
-          <button id="refresh-log" type="button">Refresh JSON</button>
-          <button id="download-log" type="button">Download JSON</button>
-          <button id="download-csv" type="button">Download CSV</button>
-          <button id="reset-item" class="quiet-button" type="button">Reset current item</button>
-        </div>
-        <div id="researcher-summary"></div>
-        <form id="hint-override-form" class="attempt-summary">
-          <label for="hint-override">Manual authored hint override (during Hint)</label>
-          <select id="hint-override"></select>
-          <button id="apply-hint" type="submit">Show chosen hint</button>
-        </form>
-        <form id="researcher-notes-form" class="attempt-summary">
-          <label for="researcher-notes">Researcher notes (separate from participant responses)</label>
-          <textarea id="researcher-notes" placeholder="Optional: hesitation, redraw, confusion, asked for clarification, hint too vague/direct"></textarea>
-          <button type="submit">Save researcher notes</button>
-        </form>
-        <pre id="debug-output">Complete an action to inspect its log.</pre>
-      </details>
     </main>
-    <footer>
-      请选择最能包含支持你判断的视觉证据的区域。
-    </footer>
+    <footer>您可以跳过任何问题或随时停止。 / You may skip any question or stop at any time.</footer>
   </body>
 </html>
