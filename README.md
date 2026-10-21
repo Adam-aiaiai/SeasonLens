@@ -16,12 +16,13 @@ No local installation is required for the online demo.
 ## Integrated study flow
 
 ```text
-Welcome/Consent → A → B → C → D → three existing SeasonLens items → E → Completion
+Welcome/Consent → A → B → C → D → E → Completion
 ```
 
-B–D are backend-gated, entirely unaided stages using the four approved images from
-the authoritative bilingual questionnaire. The standalone prototype remains at
-`/prototype.html`.
+B–D are backend-gated, entirely unaided stages. New studies progress automatically
+after each explicit submission; future stages and images remain inaccessible until
+then. B uses prototype item 1's image, D uses prototype item 2's image, and C keeps
+its approved temporal pair. The standalone prototype remains at `/prototype.html`.
 
 SeasonLens is currently deterministic: ecological facts, accepted evidence regions, stage answers, and hints are frozen authored content. Rule-based diagnosis selects an appropriate hint from that library; the prototype does not use an LLM or vision model to generate botanical answers.
 
@@ -74,7 +75,8 @@ All three use project-local whole-plant or whole-branch photographs so the parti
 - Group A answer-first behavior
 - Group C error-contingent adaptive guidance
 - Bilingual A–E questionnaire with stable field IDs and draft resume
-- Backend-enforced researcher release between unaided stages
+- Self-guided, server-ordered A→B→C→D→E progression for new studies
+- Versioned legacy researcher-assisted workflow for existing studies
 - SQLite/PostgreSQL persistence with startup migrations
 - Authenticated researcher dashboard with CSRF protection
 - Independent and combined JSON/CSV, XLSX, and complete ZIP exports
