@@ -114,3 +114,28 @@ node --check apps/web/researcher.js
 node --test apps/web/tests/*.test.cjs
 npm.cmd --prefix packages/frontend-core run typecheck
 ```
+
+For a real-browser smoke test, start the server against a disposable database,
+launch an installed Chromium browser with a DevTools port, and run the
+dependency-free verifier:
+
+```powershell
+$env:DATABASE_URL='sqlite:///C:/absolute/path/to/seasonlens-e2e.db'
+$env:SEASONLENS_RESEARCHER_USERNAME='e2e_researcher'
+$env:SEASONLENS_RESEARCHER_PASSWORD='e2e-password'
+python apps/api/main.py --port 8765
+
+& 'C:\Program Files\Google\Chrome\Application\chrome.exe' --headless=new --remote-debugging-port=9223 --user-data-dir='C:\absolute\path\to\chrome-e2e-profile' --no-first-run about:blank
+
+$env:SEASONLENS_E2E_URL='http://127.0.0.1:8765'
+$env:SEASONLENS_E2E_RESEARCHER_USERNAME='e2e_researcher'
+$env:SEASONLENS_E2E_RESEARCHER_PASSWORD='e2e-password'
+node scripts/verify_formative_browser.mjs
+```
+
+The verifier completes two independent participant runs, validates the rendered
+B-D wording and image loads, confirms the A-E-only progress indicator, signs in
+to the researcher dashboard, and downloads every combined export. If the
+isolated database contains a v3 record with participant ID `E2E-LEGACY`, that
+historical configuration is checked too; set
+`SEASONLENS_E2E_REQUIRE_LEGACY=true` to require it.
