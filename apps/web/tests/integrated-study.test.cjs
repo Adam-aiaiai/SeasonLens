@@ -48,4 +48,3 @@ test("researcher client uses authenticated session and CSRF rather than debug he
   assert.match(researcherJs, /debug=1.*do not grant access/);
   assert.match(researcherJs, /export\.zip/);
 });
-

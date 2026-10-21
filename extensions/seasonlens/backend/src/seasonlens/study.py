@@ -444,4 +444,3 @@ def _xlsx(sheets: dict[str, list[list[object]]]) -> bytes:
         for index, rows in enumerate(sheets.values(), 1):
             archive.writestr(f"xl/worksheets/sheet{index}.xml", _sheet_xml(rows))
     return output.getvalue()
-

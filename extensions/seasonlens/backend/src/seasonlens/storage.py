@@ -360,4 +360,3 @@ class PersistentRepository:
             VALUES (?, ?, ?, ?, ?, ?)"""),
             (event["event_id"], event["study_id"], event["event_type"], event["actor_id"],
              _json(event.get("payload", {})), event["recorded_at"]))
-

@@ -161,4 +161,3 @@ class ResearcherAuthTests(unittest.TestCase):
                     auth.authenticate(token)
             finally:
                 repository.close()
-

@@ -92,4 +92,3 @@ class ResearcherAuth:
     def logout(self, token: str) -> None:
         if token:
             self.repository.delete_researcher_session(opaque_hash(token))
-

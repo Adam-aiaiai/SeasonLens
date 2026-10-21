@@ -109,4 +109,3 @@ node --check apps/web/researcher.js
 node --test apps/web/tests/*.test.cjs
 npm.cmd --prefix packages/frontend-core run typecheck
 ```
-
