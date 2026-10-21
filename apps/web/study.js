@@ -4,6 +4,8 @@ const progress = document.querySelector("#study-progress");
 let study = null;
 let saveTimer = null;
 let saving = false;
+const SELF_GUIDED_PROGRESS_STAGES = ["A", "B", "C", "D", "E"];
+const ASSISTED_PROGRESS_STAGES = ["A", "B", "C", "D", "PROTOTYPE", "E"];
 
 const escapeHtml = value => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;")
   .replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
@@ -24,6 +26,24 @@ function bilingual(value) {
   return `<span class="question-zh">${escapeHtml(value.zh)}</span><span class="question-en" lang="en">${escapeHtml(value.en)}</span>`;
 }
 
+function normalizeStudyResponse(value) {
+  if (!value || typeof value !== "object" || typeof value.stage !== "string") {
+    throw new Error("Invalid study response.");
+  }
+  if (!value.progress || !Array.isArray(value.progress.completed)) {
+    throw new Error("Study progress is missing from the server response.");
+  }
+  if (!Array.isArray(value.progress.stages)) {
+    const assisted = value.study_mode !== "self_guided"
+      || value.stage.startsWith("WAIT_") || value.stage === "PROTOTYPE";
+    value.progress = {
+      ...value.progress,
+      stages: [...(assisted ? ASSISTED_PROGRESS_STAGES : SELF_GUIDED_PROGRESS_STAGES)],
+    };
+  }
+  return value;
+}
+
 function renderWelcome(config) {
   progress.hidden = true;
   app.innerHTML = `<div class="introduction bilingual-intro">
@@ -41,7 +61,7 @@ function renderWelcome(config) {
     event.preventDefault();
     try {
       setStatus("正在创建研究记录… / Creating study record…");
-      study = await api("/api/studies", { method: "POST", body: JSON.stringify({ participant_id: document.querySelector("#participant-id").value.trim(), consent_acknowledged: document.querySelector("#consent-acknowledged").checked }) });
+      study = normalizeStudyResponse(await api("/api/studies", { method: "POST", body: JSON.stringify({ participant_id: document.querySelector("#participant-id").value.trim(), consent_acknowledged: document.querySelector("#consent-acknowledged").checked }) }));
       render();
     } catch (error) { setStatus(error.message, true); }
   });
@@ -129,7 +149,7 @@ async function saveDraft(announce) {
   saving = true;
   clearTimeout(saveTimer);
   try {
-    study = await api(`/api/studies/${study.study_id}/draft`, { method: "POST", body: JSON.stringify({ version: study.version, values: valuesFromForm() }) });
+    study = normalizeStudyResponse(await api(`/api/studies/${study.study_id}/draft`, { method: "POST", body: JSON.stringify({ version: study.version, values: valuesFromForm() }) }));
     if (announce) setStatus("草稿已保存 / Draft saved");
   } catch (error) { setStatus(error.message, true); }
   finally { saving = false; }
@@ -141,7 +161,7 @@ async function submitSection(event) {
   while (saving) await new Promise(resolve => setTimeout(resolve, 50));
   try {
     setStatus("正在提交… / Submitting…");
-    study = await api(`/api/studies/${study.study_id}/submit`, { method: "POST", body: JSON.stringify({ version: study.version, values: valuesFromForm() }) });
+    study = normalizeStudyResponse(await api(`/api/studies/${study.study_id}/submit`, { method: "POST", body: JSON.stringify({ version: study.version, values: valuesFromForm() }) }));
     render();
   } catch (error) { setStatus(error.message, true); }
 }
@@ -173,7 +193,7 @@ function render() {
 
 async function resume() {
   try {
-    study = await api("/api/studies/current");
+    study = normalizeStudyResponse(await api("/api/studies/current"));
     render();
   } catch (error) {
     if (error.status === 401) {
