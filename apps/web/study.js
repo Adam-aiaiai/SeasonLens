@@ -4,10 +4,18 @@ const progress = document.querySelector("#study-progress");
 let study = null;
 let saveTimer = null;
 let saving = false;
+let submitting = false;
 let creatingStudy = false;
 let startingNewStudy = false;
 const SELF_GUIDED_PROGRESS_STAGES = ["A", "B", "C", "D", "E"];
 const ASSISTED_PROGRESS_STAGES = ["A", "B", "C", "D", "PROTOTYPE", "E"];
+const CONFIDENCE_OPTIONS = [
+  [1, "完全没把握", "No confidence"],
+  [2, "把握较低", "Low confidence"],
+  [3, "把握中等", "Moderate confidence"],
+  [4, "把握较高", "High confidence"],
+  [5, "很有把握", "Full confidence"],
+];
 
 const escapeHtml = value => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;")
   .replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
@@ -15,7 +23,10 @@ const escapeHtml = value => String(value ?? "").replaceAll("&", "&amp;").replace
 async function api(path, options = {}) {
   const response = await fetch(path, { ...options, headers: { "Content-Type": "application/json", ...(options.headers || {}) } });
   const body = await response.json();
-  if (!response.ok) throw Object.assign(new Error(body.error || `请求失败 (${response.status})`), { status: response.status });
+  if (!response.ok) throw Object.assign(new Error(body.error || `请求失败 (${response.status})`), {
+    status: response.status,
+    validationErrors: body.validation_errors || [],
+  });
   return body;
 }
 
@@ -98,7 +109,7 @@ function materialPanel(material, section) {
     <img src="${escapeHtml(image.image_path)}" alt="${section === "C" ? (index === 0 ? "较早时间点材料 / Earlier material" : "当前时间点材料 / Current material") : "研究植物材料 / Study plant material"}">
     <figcaption>${section === "C" ? (index === 0 ? "较早 / Earlier" : "当前 / Current") : "观察材料 / Observation material"} · ${escapeHtml(image.material_id)}</figcaption>
   </figure>`).join("");
-  return `<aside class="material-panel ${section === "C" ? "comparison-materials" : ""}">${images}</aside>`;
+  return `<div class="material-column"><aside class="material-panel ${section === "C" ? "comparison-materials" : ""}">${images}</aside></div>`;
 }
 
 function metadataFields(section, material, draft) {
@@ -112,9 +123,27 @@ function metadataFields(section, material, draft) {
 
 function questionField(field, draft) {
   const value = draft[field.id] ?? "";
-  if (field.type === "text") return `<label class="question-field" for="${field.id}"><span class="question-id">${field.id}</span>${bilingual(field)}<textarea id="${field.id}" name="${field.id}" rows="3">${escapeHtml(value)}</textarea></label>`;
-  if (field.type === "confidence") return `<label class="question-field" for="${field.id}"><span class="question-id">${field.id}</span>${bilingual(field)}<select id="${field.id}" name="${field.id}"><option value="">跳过 / Skip</option>${[1,2,3,4,5].map(number => `<option value="${number}" ${Number(value) === number ? "selected" : ""}>${number}${number === 1 ? " — 完全没把握 / Not at all confident" : number === 3 ? " — 一般 / Moderately confident" : number === 5 ? " — 很有把握 / Very confident" : ""}</option>`).join("")}</select></label>`;
-  return `<label class="question-field" for="${field.id}"><span class="question-id">${field.id}</span>${bilingual(field)}<select id="${field.id}" name="${field.id}"><option value="">跳过 / Skip</option>${field.options.map(option => `<option value="${escapeHtml(option.value)}" ${value === option.value ? "selected" : ""}>${escapeHtml(option.zh)} / ${escapeHtml(option.en)}</option>`).join("")}</select></label>`;
+  const required = field.required === true;
+  const condition = field.display_when || {};
+  const hidden = !fieldApplies(field, draft);
+  const attributes = `data-question-id="${escapeHtml(field.id)}"${condition.field_id ? ` data-display-field="${escapeHtml(condition.field_id)}" data-display-not-in="${escapeHtml((condition.not_in || []).join("|"))}"` : ""}${hidden ? " hidden" : ""}`;
+  const marker = required ? `<span class="required-marker">必填 / Required</span>` : `<span class="optional-marker">选答 / Optional</span>`;
+  const error = `<span class="field-validation" id="${field.id}-error" hidden>请回答此必填题。 / This required question must be answered.</span>`;
+  let control;
+  if (field.type === "text") control = `<textarea id="${field.id}" name="${field.id}" rows="3" ${required ? "aria-required=\"true\"" : ""} aria-describedby="${field.id}-error">${escapeHtml(value)}</textarea>`;
+  else if (field.type === "confidence") control = `<select id="${field.id}" name="${field.id}" ${required ? "aria-required=\"true\"" : ""} aria-describedby="${field.id}-error"><option value="">${required ? "请选择 / Select" : "跳过 / Skip"}</option>${CONFIDENCE_OPTIONS.map(([number, zh, en]) => `<option value="${number}" ${Number(value) === number ? "selected" : ""}>${number} — ${zh} / ${en}</option>`).join("")}</select>`;
+  else if (field.type === "multiple_choice") control = `<fieldset id="${field.id}" ${required ? "aria-required=\"true\"" : ""} aria-describedby="${field.id}-error">${field.options.map(option => `<label class="checkbox-label"><input type="checkbox" name="${field.id}" value="${escapeHtml(option.value)}" ${Array.isArray(value) && value.includes(option.value) ? "checked" : ""}>${escapeHtml(option.zh)} / ${escapeHtml(option.en)}</label>`).join("")}</fieldset>`;
+  else control = `<select id="${field.id}" name="${field.id}" ${required ? "aria-required=\"true\"" : ""} aria-describedby="${field.id}-error"><option value="">${required ? "请选择 / Select" : "跳过 / Skip"}</option>${field.options.map(option => `<option value="${escapeHtml(option.value)}" ${value === option.value ? "selected" : ""}>${escapeHtml(option.zh)} / ${escapeHtml(option.en)}</option>`).join("")}</select>`;
+  return `<label class="question-field" for="${field.id}" ${attributes}><span class="question-id">${field.id}</span>${marker}${bilingual(field)}${control}${error}</label>`;
+}
+
+function fieldApplies(field, values) {
+  const condition = field.display_when;
+  if (!condition) return true;
+  const trigger = values[condition.field_id] ?? null;
+  if (condition.in && !condition.in.includes(trigger)) return false;
+  if (condition.not_in && condition.not_in.includes(trigger)) return false;
+  return true;
 }
 
 function renderSection() {
@@ -128,13 +157,15 @@ function renderSection() {
         ${section.fields.map(field => questionField(field, study.draft)).join("")}
         ${section.closing ? `<div class="instruction-panel closing">${bilingual(section.closing)}</div>` : ""}
         <div class="form-actions"><button type="button" id="save-draft" class="quiet-button">保存草稿 / Save draft</button><button type="submit">提交本部分 / Submit section</button></div>
-        <p class="commit-note">${study.study_mode === "self_guided"
-          ? "所有问题均可跳过。提交后将直接进入下一部分。 / Every question may be skipped. After submission, the next section begins immediately."
-          : "所有问题均可跳过。提交后由研究员释放下一观察阶段。 / Every question may be skipped. The researcher releases the next observation stage."}</p>
+        <p class="commit-note">必填题标有“必填 / Required”；选答题可留空，您也可以随时停止参与。 / Required questions are labeled “必填 / Required”; optional questions may be left blank, and you may stop participating at any time. ${study.study_mode === "self_guided"
+          ? "提交后将直接进入下一部分。 / After submission, the next section begins immediately."
+          : "提交后由研究员释放下一观察阶段。 / The researcher releases the next observation stage."}</p>
       </form></div>`;
   const form = document.querySelector("#section-form");
   form.addEventListener("input", scheduleDraft);
   form.addEventListener("change", scheduleDraft);
+  form.addEventListener("input", handleFieldChange);
+  form.addEventListener("change", handleFieldChange);
   document.querySelector("#save-draft").addEventListener("click", () => saveDraft(true));
   form.addEventListener("submit", submitSection);
 }
@@ -144,11 +175,74 @@ function valuesFromForm() {
   const values = {};
   for (const element of form.elements) {
     if (!element.name) continue;
-    if (element.type === "checkbox") values[element.name] = element.checked;
+    const spec = study.section?.fields?.find(field => field.id === element.name);
+    if (element.type === "checkbox" && spec?.type === "multiple_choice") {
+      values[element.name] ||= [];
+      if (element.checked) values[element.name].push(element.value);
+    } else if (element.type === "checkbox") values[element.name] = element.checked;
     else if (element.tagName === "SELECT" && (element.name.endsWith("CONFIDENCE") || element.name === "C5")) values[element.name] = element.value ? Number(element.value) : null;
     else values[element.name] = element.value || null;
   }
   return values;
+}
+
+function missingValue(value) {
+  return value === null || value === undefined || (typeof value === "string" && !value.trim())
+    || (Array.isArray(value) && value.length === 0);
+}
+
+function clearFieldValidation(fieldId) {
+  const wrapper = document.querySelector(`[data-question-id="${CSS.escape(fieldId)}"]`);
+  if (!wrapper) return;
+  wrapper.classList.remove("invalid");
+  wrapper.querySelector(".field-validation")?.setAttribute("hidden", "");
+  wrapper.querySelector("textarea, select, fieldset")?.removeAttribute("aria-invalid");
+}
+
+function markFieldInvalid(fieldId) {
+  const wrapper = document.querySelector(`[data-question-id="${CSS.escape(fieldId)}"]`);
+  if (!wrapper || wrapper.hidden) return null;
+  wrapper.classList.add("invalid");
+  wrapper.querySelector(".field-validation")?.removeAttribute("hidden");
+  const control = wrapper.querySelector("textarea, select, fieldset");
+  control?.setAttribute("aria-invalid", "true");
+  return control;
+}
+
+function updateConditionalFields() {
+  const values = valuesFromForm();
+  for (const field of study.section.fields) {
+    const wrapper = document.querySelector(`[data-question-id="${CSS.escape(field.id)}"]`);
+    if (!wrapper) continue;
+    wrapper.hidden = !fieldApplies(field, values);
+    if (wrapper.hidden) clearFieldValidation(field.id);
+  }
+}
+
+function handleFieldChange(event) {
+  const field = study.section.fields.find(item => item.id === event.target.name);
+  if (field && !missingValue(valuesFromForm()[field.id])) clearFieldValidation(field.id);
+  updateConditionalFields();
+}
+
+function validateSectionForm() {
+  updateConditionalFields();
+  const values = valuesFromForm();
+  let firstInvalid = null;
+  for (const field of study.section.fields) {
+    clearFieldValidation(field.id);
+    if (field.required === true && fieldApplies(field, values) && missingValue(values[field.id])) {
+      const control = markFieldInvalid(field.id);
+      if (!firstInvalid) firstInvalid = control;
+    }
+  }
+  if (firstInvalid) {
+    setStatus("请先完成本部分所有必填题目，再继续。 / Please complete all required questions in this section before continuing.", true);
+    firstInvalid.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    firstInvalid.focus?.({ preventScroll: true });
+    return false;
+  }
+  return true;
 }
 
 function scheduleDraft() {
@@ -169,13 +263,25 @@ async function saveDraft(announce) {
 
 async function submitSection(event) {
   event.preventDefault();
+  if (submitting || !validateSectionForm()) return;
+  submitting = true;
+  const submit = event.currentTarget.querySelector('button[type="submit"]');
+  if (submit) submit.disabled = true;
   clearTimeout(saveTimer);
   while (saving) await new Promise(resolve => setTimeout(resolve, 50));
   try {
     setStatus("正在提交… / Submitting…");
     study = normalizeStudyResponse(await api(`/api/studies/${study.study_id}/submit`, { method: "POST", body: JSON.stringify({ version: study.version, values: valuesFromForm() }) }));
     render();
-  } catch (error) { setStatus(error.message, true); }
+  } catch (error) {
+    for (const item of error.validationErrors || []) markFieldInvalid(item.question_id);
+    setStatus(error.validationErrors?.length
+      ? "请先完成本部分所有必填题目，再继续。 / Please complete all required questions in this section before continuing."
+      : error.message, true);
+  } finally {
+    submitting = false;
+    if (submit?.isConnected) submit.disabled = false;
+  }
 }
 
 function renderWaiting() {
@@ -216,7 +322,9 @@ async function startNewStudy(event) {
 function render() {
   setStatus("");
   updateProgress();
-  if (["A", "B", "C", "D", "E"].includes(study.stage)) renderSection();
+  const sectionIsActive = ["A", "B", "C", "D", "E"].includes(study.stage);
+  app.classList.toggle("questionnaire-active", sectionIsActive);
+  if (sectionIsActive) renderSection();
   else if (study.stage.startsWith("WAIT_")) renderWaiting();
   else if (study.stage === "PROTOTYPE") renderPrototype();
   else renderComplete();

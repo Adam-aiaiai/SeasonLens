@@ -2,6 +2,8 @@ const app = document.querySelector("#researcher-app");
 const statusBox = document.querySelector("#researcher-status");
 let csrf = "";
 let currentStudy = null;
+let listedStudies = [];
+let deleting = false;
 
 const escapeHtml = value => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 
@@ -55,15 +57,74 @@ async function listStudies() {
   try {
     const studies = await api("/api/researcher/studies");
     if (!Array.isArray(studies)) throw new Error("The server returned an invalid study list.");
-    app.innerHTML = `<div class="dashboard-heading"><div><p class="eyebrow">Study operations</p><h2>Participants and progress</h2></div><div><button id="refresh" class="quiet-button">Refresh</button> <button id="logout" class="quiet-button">Sign out</button></div></div>
-      <div class="table-scroll"><table class="study-table"><thead><tr><th>Participant</th><th>Study</th><th>Stage</th><th>Prototype items</th><th>Updated (UTC)</th><th></th></tr></thead><tbody>${studies.map(row => `<tr><td>${escapeHtml(row.participant_id)}</td><td><code>${escapeHtml(row.study_id)}</code></td><td>${escapeHtml(row.stage)}</td><td>${escapeHtml(row.prototype_session_count)}</td><td>${escapeHtml(row.updated_at)}</td><td><button class="open-study" data-id="${escapeHtml(row.study_id)}">Open</button></td></tr>`).join("") || '<tr><td colspan="6">No studies yet.</td></tr>'}</tbody></table></div>`;
+    listedStudies = studies;
+    app.innerHTML = `<div class="dashboard-heading"><div><p class="eyebrow">Study operations</p><h2>Participants and progress</h2><p id="study-count">${studies.length} study record${studies.length === 1 ? "" : "s"} / ${studies.length} 条研究记录</p></div><div><button id="refresh" class="quiet-button">Refresh</button> <button id="logout" class="quiet-button">Sign out</button></div></div>
+      <div class="table-scroll"><table class="study-table"><thead><tr><th>Participant</th><th>Study</th><th>Stage</th><th>Prototype items</th><th>Updated (UTC)</th><th>Actions</th></tr></thead><tbody>${studies.map(row => `<tr><td>${escapeHtml(row.participant_id)}</td><td><code>${escapeHtml(row.study_id)}</code></td><td>${escapeHtml(row.stage)}</td><td>${escapeHtml(row.prototype_session_count)}</td><td>${escapeHtml(row.updated_at)}</td><td><div class="study-actions"><button class="open-study" data-id="${escapeHtml(row.study_id)}">Open</button><button class="delete-study danger-button" data-id="${escapeHtml(row.study_id)}">删除记录 / Delete Record</button></div></td></tr>`).join("") || '<tr><td colspan="6">No studies yet.</td></tr>'}</tbody></table></div>
+      <dialog id="deletion-dialog" class="deletion-dialog" aria-labelledby="deletion-title">
+        <form id="deletion-form" method="dialog"><p class="eyebrow">Permanent deletion / 永久删除</p><h2 id="deletion-title">删除研究记录 / Delete study record</h2><dl><dt>Participant ID</dt><dd id="delete-participant"></dd><dt>Study ID</dt><dd><code id="delete-study-id"></code></dd><dt>Status</dt><dd id="delete-stage"></dd></dl><p class="deletion-warning">确定要永久删除这条研究记录吗？此操作无法撤销。<br><span lang="en">Are you sure you want to permanently delete this study record? This action cannot be undone.</span></p><label for="delete-confirmation">输入 DELETE 或完整 Study ID 以确认 / Type DELETE or the full Study ID to confirm<input id="delete-confirmation" autocomplete="off"></label><div class="dialog-actions"><button id="cancel-delete" class="quiet-button" type="button">取消 / Cancel</button><button id="confirm-delete" class="danger-button" type="submit" disabled>确认永久删除 / Confirm Delete</button></div></form>
+      </dialog>`;
     document.querySelector("#refresh").addEventListener("click", listStudies);
     document.querySelector("#logout").addEventListener("click", async () => {
       try { await api("/api/researcher/logout", { method: "POST", body: "{}" }); csrf = ""; login(); }
       catch (error) { status(`Unable to sign out: ${error.message}`, true); }
     });
     document.querySelectorAll(".open-study").forEach(button => button.addEventListener("click", () => openStudy(button.dataset.id)));
+    document.querySelectorAll(".delete-study").forEach(button => button.addEventListener("click", () => openDeleteDialog(button.dataset.id)));
+    document.querySelector("#cancel-delete").addEventListener("click", closeDeleteDialog);
+    document.querySelector("#delete-confirmation").addEventListener("input", updateDeleteConfirmation);
+    document.querySelector("#deletion-form").addEventListener("submit", confirmDelete);
   } catch (error) { status(`Unable to load studies: ${error.message}`, true); }
+}
+
+function openDeleteDialog(studyId) {
+  const record = listedStudies.find(item => item.study_id === studyId);
+  if (!record) return;
+  const dialog = document.querySelector("#deletion-dialog");
+  dialog.dataset.studyId = studyId;
+  document.querySelector("#delete-participant").textContent = record.participant_id;
+  document.querySelector("#delete-study-id").textContent = record.study_id;
+  document.querySelector("#delete-stage").textContent = record.stage;
+  document.querySelector("#delete-confirmation").value = "";
+  document.querySelector("#confirm-delete").disabled = true;
+  if (dialog.showModal) dialog.showModal(); else dialog.setAttribute("open", "");
+  document.querySelector("#delete-confirmation").focus();
+}
+
+function closeDeleteDialog() {
+  const dialog = document.querySelector("#deletion-dialog");
+  if (dialog.close) dialog.close(); else dialog.removeAttribute("open");
+}
+
+function updateDeleteConfirmation(event) {
+  const dialog = document.querySelector("#deletion-dialog");
+  document.querySelector("#confirm-delete").disabled = deleting
+    || !["DELETE", dialog.dataset.studyId].includes(event.target.value.trim());
+}
+
+async function confirmDelete(event) {
+  event.preventDefault();
+  if (deleting) return;
+  const dialog = document.querySelector("#deletion-dialog");
+  const studyId = dialog.dataset.studyId;
+  const confirmation = document.querySelector("#delete-confirmation").value.trim();
+  if (!["DELETE", studyId].includes(confirmation)) return;
+  deleting = true;
+  document.querySelector("#confirm-delete").disabled = true;
+  try {
+    await api(`/api/researcher/studies/${studyId}`, {
+      method: "DELETE",
+      body: JSON.stringify({ confirmation }),
+    });
+    if (currentStudy?.study_id === studyId) currentStudy = null;
+    closeDeleteDialog();
+    status("研究记录已永久删除。 / Study record permanently deleted.");
+    await listStudies();
+  } catch (error) {
+    status(`删除失败，记录未更改。 / Deletion failed; the record was not changed: ${error.message}`, true);
+    document.querySelector("#confirm-delete").disabled = false;
+  } finally {
+    deleting = false;
+  }
 }
 
 function responsePanels(study) {

@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from threading import RLock
 from typing import Any, Iterator
+from uuid import uuid4
 
 from shared_platform import Actor, ActorType, EventEnvelope, StateSnapshot
 
@@ -121,6 +122,11 @@ class PersistentRepository:
                 csrf_token TEXT NOT NULL, created_at TEXT NOT NULL,
                 expires_at TEXT NOT NULL
             )""",
+            """CREATE TABLE IF NOT EXISTS study_deletion_audit (
+                audit_id TEXT PRIMARY KEY, study_id TEXT NOT NULL,
+                actor_id TEXT NOT NULL, stage TEXT NOT NULL,
+                deleted_at TEXT NOT NULL, child_counts_json TEXT NOT NULL
+            )""",
             "CREATE INDEX IF NOT EXISTS idx_study_events_study ON study_events(study_id, recorded_at)",
             "CREATE INDEX IF NOT EXISTS idx_study_sessions_study ON study_prototype_sessions(study_id, ordinal)",
             "CREATE INDEX IF NOT EXISTS idx_researcher_session_expiry ON researcher_sessions(expires_at)",
@@ -143,11 +149,15 @@ class PersistentRepository:
             cursor.execute(self._sql(
                 "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?) "
                 "ON CONFLICT(version) DO NOTHING"
-            ), (1, datetime.utcnow().isoformat() + "Z"))
+            ), (1, datetime.now(timezone.utc).isoformat()))
             cursor.execute(self._sql(
                 "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?) "
                 "ON CONFLICT(version) DO NOTHING"
-            ), (2, datetime.utcnow().isoformat() + "Z"))
+            ), (2, datetime.now(timezone.utc).isoformat()))
+            cursor.execute(self._sql(
+                "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?) "
+                "ON CONFLICT(version) DO NOTHING"
+            ), (3, datetime.now(timezone.utc).isoformat()))
 
     def close(self) -> None:
         with self._lock:
@@ -254,6 +264,41 @@ class PersistentRepository:
                 GROUP BY s.study_id, s.participant_id, s.stage, s.version, s.created_at,
                 s.updated_at, s.completed_at ORDER BY s.created_at DESC""")
             return self._rows(cursor)
+
+    def delete_study(self, study_id: str, actor_id: str, deleted_at: str) -> dict[str, Any]:
+        """Hard-delete one study and its linked research data in one transaction."""
+        with self.transaction() as cursor:
+            cursor.execute(self._sql("SELECT stage FROM studies WHERE study_id=?"), (study_id,))
+            study = self._row(cursor)
+            if not study:
+                raise ValueError("Study not found or already deleted.")
+
+            cursor.execute(self._sql(
+                "SELECT session_id FROM study_prototype_sessions WHERE study_id=? ORDER BY ordinal"
+            ), (study_id,))
+            session_ids = [row["session_id"] for row in self._rows(cursor)]
+            counts: dict[str, int] = {"prototype_sessions": len(session_ids)}
+            for table, key in (("study_responses", "responses"), ("study_materials", "materials"),
+                               ("study_events", "events")):
+                cursor.execute(self._sql(f"SELECT COUNT(*) AS total FROM {table} WHERE study_id=?"),
+                               (study_id,))
+                counts[key] = int(self._row(cursor)["total"])
+
+            cursor.execute(self._sql("DELETE FROM study_prototype_sessions WHERE study_id=?"), (study_id,))
+            for session_id in session_ids:
+                cursor.execute(self._sql("DELETE FROM prototype_sessions WHERE session_id=?"), (session_id,))
+            cursor.execute(self._sql("DELETE FROM study_events WHERE study_id=?"), (study_id,))
+            cursor.execute(self._sql("DELETE FROM study_responses WHERE study_id=?"), (study_id,))
+            cursor.execute(self._sql("DELETE FROM study_materials WHERE study_id=?"), (study_id,))
+            cursor.execute(self._sql("DELETE FROM studies WHERE study_id=?"), (study_id,))
+            if cursor.rowcount != 1:
+                raise ValueError("Study not found or already deleted.")
+            cursor.execute(self._sql("""INSERT INTO study_deletion_audit
+                (audit_id, study_id, actor_id, stage, deleted_at, child_counts_json)
+                VALUES (?, ?, ?, ?, ?, ?)"""),
+                (str(uuid4()), study_id, actor_id, study["stage"], deleted_at, _json(counts)))
+            return {"study_id": study_id, "deleted": True, "deleted_at": deleted_at,
+                    "deleted_records": counts}
 
     def update_draft(self, study_id: str, section_id: str, draft: dict[str, Any],
                      expected_version: int, updated_at: str, event: dict[str, Any]) -> bool:

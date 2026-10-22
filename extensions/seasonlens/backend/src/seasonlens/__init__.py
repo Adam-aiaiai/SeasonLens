@@ -15,7 +15,7 @@ from .domain import (
 )
 from .service import SeasonLensService
 from .storage import PersistentRepository
-from .study import FormativeStudyService
+from .study import FormativeStudyService, QuestionnaireValidationError
 from .auth import ResearcherAuth, password_hash
 
 __all__ = [
@@ -25,6 +25,7 @@ __all__ = [
     "DifficultyCode",
     "FormativeStudyService",
     "PersistentRepository",
+    "QuestionnaireValidationError",
     "ResearcherAuth",
     "SeasonLensService",
     "SeasonLensStage",

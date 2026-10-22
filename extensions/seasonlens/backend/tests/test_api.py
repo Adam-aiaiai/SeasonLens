@@ -16,6 +16,13 @@ from seasonlens import FormativeStudyService, PersistentRepository, ResearcherAu
 
 
 class ApiTests(unittest.TestCase):
+    REQUIRED = {
+        "A": {"A1": "prefer_not_to_answer", "A3": "not_sure"},
+        "B": {"B1": "Not sure", "B2": "Not sure", "B3": "Not sure", "B4": "Not sure", "B4_CONFIDENCE": 3},
+        "C": {"C1": "Not sure", "C2": "Not sure", "C3": "Not sure", "C4": "Not sure", "C5": 3, "C6": "Not sure"},
+        "D": {"D1": "Not sure", "D2": "Not sure", "D3": "Not sure", "D4": "Not sure", "D_CONFIDENCE": 3, "D5": "No help needed", "D6": "No help needed"},
+        "E": {"E1": "Not sure", "E2": "No help needed", "E3": "on_request", "E3_WHY": "Autonomy", "E4": "Not sure"},
+    }
     @classmethod
     def setUpClass(cls) -> None:
         root = Path(__file__).resolve().parents[4]
@@ -51,7 +58,7 @@ class ApiTests(unittest.TestCase):
         self.researcher_cookie = headers["Set-Cookie"].split(";", 1)[0]
         self.csrf = json.loads(text)["csrf_token"]
 
-    def request(self, path, body=None, *, researcher=False, participant=False):
+    def request(self, path, body=None, *, researcher=False, participant=False, method=None):
         headers = {"Content-Type": "application/json"}
         cookies = []
         if researcher:
@@ -62,7 +69,7 @@ class ApiTests(unittest.TestCase):
         if cookies:
             headers["Cookie"] = "; ".join(cookies)
         request = Request(self.base + path, data=json.dumps(body).encode() if body is not None else None,
-                          headers=headers)
+                          headers=headers, method=method)
         try:
             with urlopen(request, timeout=5) as response:
                 text = response.read().decode("utf-8-sig")
@@ -207,7 +214,7 @@ class ApiTests(unittest.TestCase):
         study_id = created["study_id"]
         self.participant_cookie = headers["Set-Cookie"].split(";", 1)[0]
         status, text, _ = self.request(f"/api/studies/{study_id}/submit",
-                                      {"version": created["version"], "values": {"A6": "never"}}, participant=True)
+                                      {"version": created["version"], "values": {**self.REQUIRED["A"], "A6": "never"}}, participant=True)
         participant = json.loads(text)
         self.assertEqual(participant["stage"], "B")
         self.assertEqual(participant["study_mode"], "self_guided")
@@ -229,7 +236,7 @@ class ApiTests(unittest.TestCase):
         status, text, _ = self.request(f"/api/researcher/studies/{study_id}", researcher=True)
         self.assertEqual(status, 200)
         detail = json.loads(text)
-        self.assertEqual(detail["questionnaire_version"], "3.1")
+        self.assertEqual(detail["questionnaire_version"], "3.2")
         self.assertEqual(detail["material_set_version"], "3.1")
         self.assertEqual(detail["study_mode"], "self_guided")
         self.assertEqual(self.request(f"/api/researcher/studies/{study_id}/export.json")[0], 401)
@@ -247,6 +254,47 @@ class ApiTests(unittest.TestCase):
             self.assertEqual(status, 200)
             self.assertTrue(payload.startswith(b"PK"))
 
+    def test_required_submission_returns_structured_422_without_advancing(self):
+        status, text, headers = self.request(
+            "/api/studies", {"participant_id": "F-VALIDATE", "consent_acknowledged": True})
+        self.assertEqual(status, 201)
+        created = json.loads(text)
+        self.participant_cookie = headers["Set-Cookie"].split(";", 1)[0]
+        status, text, _ = self.request(
+            f"/api/studies/{created['study_id']}/submit",
+            {"version": created["version"], "values": {}}, participant=True)
+        self.assertEqual(status, 422)
+        error = json.loads(text)
+        self.assertEqual({item["question_id"] for item in error["validation_errors"]}, {"A1", "A3"})
+        status, text, _ = self.request(f"/api/studies/{created['study_id']}", participant=True)
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(text)["stage"], "A")
+
+    def test_researcher_delete_requires_auth_csrf_and_confirmation(self):
+        ids = []
+        for participant_id in ("F-DELETE", "F-KEEP"):
+            status, text, headers = self.request(
+                "/api/studies", {"participant_id": participant_id, "consent_acknowledged": True})
+            self.assertEqual(status, 201)
+            ids.append(json.loads(text)["study_id"])
+            self.participant_cookie = headers["Set-Cookie"].split(";", 1)[0]
+        target, kept = ids
+        path = f"/api/researcher/studies/{target}"
+        self.assertEqual(self.request(path, {"confirmation": "DELETE"}, method="DELETE")[0], 401)
+        self.assertEqual(self.request(path, {"confirmation": "DELETE"}, participant=True, method="DELETE")[0], 401)
+        valid_csrf = self.csrf
+        self.csrf = "invalid"
+        try:
+            self.assertEqual(self.request(path, {"confirmation": "DELETE"}, researcher=True, method="DELETE")[0], 401)
+        finally:
+            self.csrf = valid_csrf
+        self.assertEqual(self.request(path, {"confirmation": "wrong"}, researcher=True, method="DELETE")[0], 422)
+        self.assertEqual(self.request(path, {"confirmation": target}, researcher=True, method="DELETE")[0], 200)
+        self.assertEqual(self.request(path, researcher=True)[0], 404)
+        self.assertEqual(self.request(f"/api/researcher/studies/{target}/export.json", researcher=True)[0], 404)
+        self.assertEqual(self.request(f"/api/researcher/studies/{kept}", researcher=True)[0], 200)
+        self.assertEqual(self.request(path, {"confirmation": "DELETE"}, researcher=True, method="DELETE")[0], 404)
+
     def test_completed_participant_can_start_fresh_study_without_changing_old_record(self):
         status, text, headers = self.request(
             "/api/studies", {"participant_id": "F-FIRST", "consent_acknowledged": True})
@@ -254,10 +302,10 @@ class ApiTests(unittest.TestCase):
         current = json.loads(text)
         first_id = current["study_id"]
         self.participant_cookie = headers["Set-Cookie"].split(";", 1)[0]
-        for expected_stage in ("B", "C", "D", "E", "COMPLETE"):
+        for section, expected_stage in zip(("A", "B", "C", "D", "E"), ("B", "C", "D", "E", "COMPLETE"), strict=True):
             status, text, _ = self.request(
                 f"/api/studies/{first_id}/submit",
-                {"version": current["version"], "values": {}}, participant=True)
+                {"version": current["version"], "values": self.REQUIRED[section]}, participant=True)
             self.assertEqual(status, 200)
             current = json.loads(text)
             self.assertEqual(current["stage"], expected_stage)
@@ -266,7 +314,7 @@ class ApiTests(unittest.TestCase):
         # created and the completed study remains the active resumable record.
         status, text, _ = self.request("/api/study-config", participant=True)
         self.assertEqual(status, 200)
-        self.assertEqual(json.loads(text)["version"], "3.1")
+        self.assertEqual(json.loads(text)["version"], "3.2")
         status, text, _ = self.request("/api/studies/current", participant=True)
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(text)["study_id"], first_id)
@@ -293,10 +341,10 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(json.loads(text)["study_id"], second_id)
 
         second_current = second
-        for expected_stage in ("B", "C", "D", "E", "COMPLETE"):
+        for section, expected_stage in zip(("A", "B", "C", "D", "E"), ("B", "C", "D", "E", "COMPLETE"), strict=True):
             status, text, _ = self.request(
                 f"/api/studies/{second_id}/submit",
-                {"version": second_current["version"], "values": {}}, participant=True)
+                {"version": second_current["version"], "values": self.REQUIRED[section]}, participant=True)
             self.assertEqual(status, 200)
             second_current = json.loads(text)
             self.assertEqual(second_current["stage"], expected_stage)

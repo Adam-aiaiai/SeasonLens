@@ -27,6 +27,7 @@ h2 { font: 700 clamp(1.35rem, 3vw, 1.8rem)/1.2 Georgia, serif; }
 .progress span.done { border-color: #8fa991; }
 .progress span.skipped { border-color: var(--line); color: var(--muted); opacity: .55; text-decoration: line-through; }
 .study-card { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: 0 8px 28px rgba(28, 58, 43, .07); }
+.study-card.questionnaire-active { overflow: visible; }
 .introduction { max-width: 720px; margin-inline: auto; padding: clamp(26px, 5vw, 48px); }
 .introduction > p { max-width: 62ch; }
 .instruction-definitions { display: grid; grid-template-columns: minmax(120px, max-content) 1fr; gap: 12px 18px; margin: 26px 0; padding: 20px; border-radius: 9px; background: #f3f6f0; }
@@ -102,18 +103,30 @@ footer { padding: 20px 0 32px; color: var(--muted); font-size: .78rem; }
 .section-heading > p { margin-bottom: 5px; }
 .instruction-panel { margin-top: 16px; padding: 16px 18px; border-left: 4px solid #7d9c82; background: #f2f6f1; }
 .instruction-panel span { display: block; }
-.questionnaire-layout { display: grid; grid-template-columns: minmax(300px, .85fr) minmax(0, 1.15fr); }
-.questionnaire-layout:not(:has(.material-panel)) { grid-template-columns: 1fr; }
-.material-panel { padding: 24px; border-right: 1px solid var(--line); background: #f3f6f0; }
+.questionnaire-layout { display: grid; grid-template-columns: minmax(300px, .85fr) minmax(0, 1.15fr); align-items: stretch; }
+.questionnaire-layout:not(:has(.material-column)) { grid-template-columns: 1fr; }
+.material-column { min-width: 0; border-right: 1px solid var(--line); border-radius: 0 0 0 13px; background: #f3f6f0; }
+.material-panel { position: sticky; top: 16px; max-height: calc(100vh - 32px); padding: 24px; background: #f3f6f0; }
 .material-panel figure { margin: 0 0 18px; }
-.material-panel img { display: block; width: 100%; max-height: 520px; object-fit: contain; border: 1px solid #c9d3ca; border-radius: 9px; background: #fff; }
+.material-panel figure:last-child { margin-bottom: 0; }
+.material-panel img { display: block; width: 100%; max-height: calc(100vh - 120px); object-fit: contain; border: 1px solid #c9d3ca; border-radius: 9px; background: #fff; }
 .material-panel figcaption { margin-top: 7px; color: var(--muted); font-size: .8rem; }
 .comparison-materials { display: grid; gap: 16px; align-content: start; }
+.comparison-materials img { max-height: calc((100vh - 220px) / 2); }
 .questionnaire-form { padding: 26px 28px; }
 .question-field { margin-bottom: 24px; }
-.question-id { display: inline-block; min-width: 48px; color: var(--leaf); font-size: .82rem; letter-spacing: .05em; }
+.question-field[hidden] { display: none; }
+.question-id { display: inline-block; color: var(--leaf); font-size: .82rem; font-weight: 800; letter-spacing: .05em; }
+.required-marker, .optional-marker { display: inline-block; margin-left: 8px; font-size: .68rem; font-weight: 600; letter-spacing: .01em; }
+.required-marker { color: #78837d; }
+.optional-marker { color: var(--muted); }
 .question-zh, .question-en { display: block; font-weight: 700; }
+.question-zh { margin-top: 5px; }
 .question-en { margin: 4px 0 9px; color: var(--muted); font-size: .9rem; font-weight: 500; }
+.question-field.invalid { margin-inline: -10px; padding: 10px; border-left: 4px solid #b84228; border-radius: 6px; background: #fff2ef; }
+.question-field.invalid textarea, .question-field.invalid select, .question-field.invalid fieldset { border-color: #b84228; box-shadow: 0 0 0 1px #b84228; }
+.field-validation { display: block; margin: -4px 0 12px; color: #9a2f1b; font-size: .86rem; font-weight: 750; }
+.field-validation[hidden] { display: none; }
 .metadata-field { margin-bottom: 18px; padding: 12px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); }
 .checkbox-label { display: flex; gap: 8px; align-items: center; }
 .form-actions, .export-links { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -126,6 +139,15 @@ footer { padding: 20px 0 32px; color: var(--muted); font-size: .78rem; }
 .study-table { width: 100%; border-collapse: collapse; }
 .study-table th, .study-table td { padding: 11px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 .study-table code { overflow-wrap: anywhere; }
+.study-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+.danger-button { border: 1px solid #a93624; background: #fff; color: #912c1d; }
+.danger-button:hover { background: #912c1d; color: #fff; }
+.deletion-dialog { width: min(560px, calc(100% - 32px)); border: 0; border-radius: 12px; padding: 0; box-shadow: 0 18px 60px rgba(20, 35, 27, .3); }
+.deletion-dialog::backdrop { background: rgba(13, 27, 20, .58); }
+.deletion-dialog form { padding: 26px; }
+.deletion-dialog dl { display: grid; grid-template-columns: max-content 1fr; gap: 8px 14px; }
+.deletion-warning { padding: 13px; border-left: 4px solid #b84228; background: #fff2ef; color: #782518; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 .researcher-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 0 26px; }
 .researcher-grid section { padding: 18px; border: 1px solid var(--line); border-radius: 9px; }
 .researcher-main .attempt-summary, .researcher-main > .study-card > h3, .researcher-main .response-panel { margin-inline: 26px; }
@@ -144,7 +166,12 @@ footer { padding: 20px 0 32px; color: var(--muted); font-size: .78rem; }
   .instruction-definitions { grid-template-columns: 1fr; gap: 5px; }
   .progress span { font-size: 0; }
   .progress span::first-letter { font-size: .8rem; }
-  .questionnaire-layout, .researcher-grid { grid-template-columns: 1fr; }
-  .material-panel { border-right: 0; border-bottom: 1px solid var(--line); }
+  .questionnaire-layout { display: block; }
+  .researcher-grid { grid-template-columns: 1fr; }
+  .material-column { display: contents; }
+  .material-panel { top: 8px; z-index: 3; display: flex; gap: 10px; overflow: hidden; max-height: 30vh; padding: 10px 12px; border-bottom: 1px solid var(--line); background: rgba(243, 246, 240, .97); box-shadow: 0 4px 12px rgba(23, 49, 38, .12); }
+  .material-panel figure { display: flex; flex: 1 1 0; min-width: 0; margin: 0; flex-direction: column; }
+  .material-panel img, .comparison-materials img { width: 100%; min-height: 0; max-height: 21vh; object-fit: contain; }
+  .material-panel figcaption { overflow: hidden; margin-top: 3px; font-size: .68rem; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
   .dashboard-heading { flex-direction: column; }
 }

@@ -8,7 +8,7 @@ The integrated route at `/` enforces:
 Welcome/Consent → A → B → C → D → E → Complete
 ```
 
-For new v3.1 studies, each explicit submission atomically advances to the next
+For new v3.2 studies, each explicit submission atomically advances to the next
 section. Sections B–D expose only the configured image(s), stable material IDs,
 and response fields. They never call diagnostic or hint services, and participant
 projections exclude hashes, provenance, expert regions, correctness, hints, and
@@ -21,8 +21,10 @@ unchanged.
 
 Existing v3 study records retain their stored researcher-assisted workflow,
 including release gates and the prototype stage. New records store
-`questionnaire_version=3.1`, `material_set_version=3.1`,
+`questionnaire_version=3.2`, `material_set_version=3.1`,
 `study_mode=self_guided`, and `enable_prototype_stage=false`.
+The preserved v3.1 schema is selected for every existing v3.1 record, including
+unfinished sessions, so IDs and wording are never changed mid-study.
 
 ## Local setup
 
@@ -65,9 +67,13 @@ also require a per-session CSRF token. `?debug=1` and the former
 - `postgresql://...` or `postgres://...`: PostgreSQL through psycopg.
 
 The non-destructive migrations run at process startup in a transaction and record
-versions 1 and 2 in `schema_migrations`. Migration 2 adds per-study configuration
+versions 1 through 3 in `schema_migrations`. Migration 2 adds per-study configuration
 and assigns the legacy v3 configuration to existing rows. Reference SQL is in
 `extensions/seasonlens/backend/migrations/`.
+
+Migration 3 adds a minimal deletion audit containing only the deleted study ID,
+researcher actor ID, stage, timestamp, and child-record counts. It does not retain
+participant IDs or questionnaire answers.
 
 Study responses, materials, stage transitions, researcher sessions, prototype
 snapshots, and complete prototype event histories survive application restarts.
@@ -87,9 +93,13 @@ database write is transactional.
    project-controlled `/assets/` path, include provenance, and match their stored
    SHA-256 hash. Released material configurations are immutable.
 7. Download questionnaire-only or combined JSON/CSV, XLSX, or the complete ZIP.
+8. To permanently remove one test record, choose **Delete Record**, review its
+   participant/study/status summary, and type `DELETE` or the exact study ID. The
+   authenticated, CSRF-protected transaction hard-deletes that study’s responses,
+   materials, events, study metadata, links, and linked prototype snapshots only.
 
 The ZIP contains combined and questionnaire-only datasets plus unchanged JSON and
-CSV logs for any linked prototype items. A self-guided v3.1 study exports empty
+CSV logs for any linked prototype items. A self-guided v3.2 study exports empty
 prototype arrays and creates no fabricated sessions or events. Combined JSON
 retains all available event arrays; flat CSV stores nested histories as JSON.
 

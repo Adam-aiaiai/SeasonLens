@@ -5,7 +5,7 @@ const { join } = require("node:path");
 const vm = require("node:vm");
 
 const schema = JSON.parse(readFileSync(
-  join(__dirname, "../../../extensions/seasonlens/data/formative_questionnaire_v3_1.json"), "utf8"));
+  join(__dirname, "../../../extensions/seasonlens/data/formative_questionnaire_v3_2.json"), "utf8"));
 const escaped = value => String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;")
   .replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 
@@ -58,7 +58,7 @@ test("legacy progress response is initialized before the progress map call", () 
     ["A", "B", "C", "D", "E"]);
 });
 
-test("all v3.1 A-E fields and B-D materials render with their authored shapes", () => {
+test("all v3.2 A-E fields and B-D materials render with their authored shapes", () => {
   const f = fixture();
   for (const [sectionId, section] of Object.entries(schema.sections)) {
     for (const field of section.fields) {
@@ -67,11 +67,22 @@ test("all v3.1 A-E fields and B-D materials render with their authored shapes", 
       assert.match(html, new RegExp(`>${field.id}<`));
       assert.ok(html.includes(escaped(field.zh)));
       assert.ok(html.includes(escaped(field.en)));
+      if (field.required) {
+        assert.match(html, new RegExp(`>${field.id}<\\/span><span class="required-marker">必填 \\/ Required`));
+        assert.match(html, /aria-required="true"/);
+      } else {
+        assert.match(html, /选答 \/ Optional/);
+      }
       if (field.type === "choice") {
         assert.equal((html.match(/<option value=/g) || []).length, field.options.length + 1);
       }
       if (field.type === "confidence") {
         assert.equal((html.match(/<option value=/g) || []).length, 6);
+        assert.match(html, />1 — 完全没把握 \/ No confidence</);
+        assert.match(html, />2 — 把握较低 \/ Low confidence</);
+        assert.match(html, />3 — 把握中等 \/ Moderate confidence</);
+        assert.match(html, />4 — 把握较高 \/ High confidence</);
+        assert.match(html, />5 — 很有把握 \/ Full confidence</);
       }
     }
     assert.ok(section.title.zh && section.title.en, `${sectionId} requires a bilingual title`);
@@ -81,11 +92,34 @@ test("all v3.1 A-E fields and B-D materials render with their authored shapes", 
     f.context.material = { images: schema.materials[sectionId] };
     f.context.sectionId = sectionId;
     const html = f.run("materialPanel(material, sectionId)");
+    assert.match(html, /^<div class="material-column"><aside class="material-panel/);
+    assert.match(html, /<\/aside><\/div>$/);
     for (const image of schema.materials[sectionId]) {
       assert.ok(html.includes(image.image_path));
       assert.ok(html.includes(image.material_id));
     }
   }
+});
+
+test("observation material and form share one section-height layout boundary", () => {
+  const f = fixture();
+  f.context.projection = {
+    stage: "D",
+    section: schema.sections.D,
+    material: { images: schema.materials.D, material_id: schema.materials.D[0].material_id },
+    draft: {},
+    study_mode: "self_guided",
+  };
+  f.run("study = projection; renderSection()");
+  const html = f.elements["#study-app"].innerHTML;
+  assert.match(html, /<div class="questionnaire-layout"><div class="material-column"><aside[\s\S]*<\/aside><\/div>\s*<form id="section-form"/);
+});
+
+test("conditional follow-ups are hidden until their authored trigger applies", () => {
+  const f = fixture();
+  f.context.field = schema.sections.E.fields.find(field => field.id === "E3_WHY");
+  assert.match(f.run("questionField(field, {})"), /^<label[^>]+ hidden>/);
+  assert.doesNotMatch(f.run('questionField(field, {E3: "on_request"})'), /^<label[^>]+ hidden>/);
 });
 
 test("completion starts one fresh consent flow even when clicked repeatedly", async () => {

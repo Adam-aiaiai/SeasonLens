@@ -48,6 +48,14 @@ def safe_csv(value: object) -> str:
     return "'" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
 
 
+class QuestionnaireValidationError(ValueError):
+    """Structured participant-facing validation failure for a questionnaire section."""
+
+    def __init__(self, errors: list[dict[str, Any]]) -> None:
+        super().__init__("Please complete all required questions in this section before continuing.")
+        self.errors = errors
+
+
 class FormativeStudyService:
     def __init__(self, repository: PersistentRepository, prototype: SeasonLensService, *,
                  clock: Callable[[], str] = utc_now,
@@ -56,11 +64,15 @@ class FormativeStudyService:
         self.prototype = prototype
         self.clock = clock
         data_root = Path(__file__).resolve().parents[3] / "data"
-        path = schema_path or data_root / "formative_questionnaire_v3_1.json"
+        path = schema_path or data_root / "formative_questionnaire_v3_2.json"
         self.schema = json.loads(path.read_text(encoding="utf-8"))
-        legacy_path = data_root / "formative_questionnaire_v3.json"
-        legacy = json.loads(legacy_path.read_text(encoding="utf-8")) if legacy_path != path else self.schema
-        self.schemas = {str(legacy["version"]): legacy, str(self.schema["version"]): self.schema}
+        schema_paths = [data_root / "formative_questionnaire_v3.json",
+                        data_root / "formative_questionnaire_v3_1.json", path]
+        self.schemas = {}
+        for versioned_path in schema_paths:
+            if versioned_path.is_file():
+                versioned_schema = json.loads(versioned_path.read_text(encoding="utf-8"))
+                self.schemas[str(versioned_schema["version"])] = versioned_schema
 
     def public_config(self) -> dict[str, Any]:
         return {"instrument_id": self.schema["instrument_id"], "version": self.schema["version"],
@@ -179,7 +191,7 @@ class FormativeStudyService:
                        else ASSISTED_TRANSITIONS)
         if section not in transitions:
             raise ValueError("The current stage cannot be submitted.")
-        clean = self._validate_values(self._schema_for(study), section, values)
+        clean = self._validate_values(self._schema_for(study), section, values, require_complete=True)
         now = self.clock()
         next_stage = transitions[section]
         success = self.repository.submit_section(study_id, section, clean, next_stage, version, now,
@@ -190,7 +202,7 @@ class FormativeStudyService:
         return self.participant_projection(study_id, token)
 
     def _validate_values(self, schema: dict[str, Any], section: str,
-                         values: dict[str, Any]) -> dict[str, Any]:
+                         values: dict[str, Any], *, require_complete: bool = False) -> dict[str, Any]:
         if not isinstance(values, dict):
             raise ValueError("Questionnaire values must be an object.")
         specs = {field["id"]: field for field in schema["sections"][section]["fields"]}
@@ -199,7 +211,7 @@ class FormativeStudyService:
             raise ValueError(f"Unexpected field IDs for Section {section}.")
         clean: dict[str, Any] = {}
         for field_id, value in values.items():
-            if value in (None, ""):
+            if value is None or (isinstance(value, str) and not value.strip()) or value == []:
                 clean[field_id] = None
                 continue
             if field_id in METADATA_FIELDS[section]:
@@ -220,9 +232,44 @@ class FormativeStudyService:
                 if value not in options:
                     raise ValueError(f"{field_id} is not one of the authored options.")
                 clean[field_id] = value
+            elif spec["type"] == "multiple_choice":
+                options = {option["value"] for option in spec["options"]}
+                if not isinstance(value, list) or not value or any(item not in options for item in value):
+                    raise ValueError(f"{field_id} must contain one or more authored options.")
+                exclusive = {option["value"] for option in spec["options"] if option.get("exclusive")}
+                if len(value) > 1 and exclusive.intersection(value):
+                    raise ValueError(f"{field_id} contains a mutually exclusive option.")
+                clean[field_id] = list(dict.fromkeys(value))
             else:
                 clean[field_id] = self._text(value)
+        if require_complete:
+            errors = []
+            effective = {field_id: clean.get(field_id) for field_id in specs}
+            for field_id, spec in specs.items():
+                if not spec.get("required") or not self._field_applies(spec, effective):
+                    continue
+                value = effective.get(field_id)
+                if value is None or (isinstance(value, str) and not value.strip()) or value == []:
+                    errors.append({
+                        "question_id": field_id,
+                        "reason": "required",
+                        "message": {"zh": "请回答此必填题。", "en": "This required question must be answered."},
+                    })
+            if errors:
+                raise QuestionnaireValidationError(errors)
         return clean
+
+    @staticmethod
+    def _field_applies(spec: dict[str, Any], values: dict[str, Any]) -> bool:
+        condition = spec.get("display_when")
+        if not condition:
+            return True
+        trigger = values.get(condition.get("field_id"))
+        if "in" in condition and trigger not in condition["in"]:
+            return False
+        if "not_in" in condition and trigger in condition["not_in"]:
+            return False
+        return True
 
     @staticmethod
     def _text(value: object) -> str:
@@ -299,6 +346,12 @@ class FormativeStudyService:
         result["events"] = self.repository.events_for_study(study_id)
         return result
 
+    def delete_study(self, study_id: str, researcher: str, confirmation: str) -> dict[str, Any]:
+        study = self._require_study(study_id)
+        if confirmation not in {"DELETE", study_id}:
+            raise ValueError("Type DELETE or the exact study ID to confirm permanent deletion.")
+        return self.repository.delete_study(study_id, researcher, self.clock())
+
     def update_researcher_metadata(self, study_id: str, version: int, researcher: str,
                                    metadata: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(metadata, dict):
@@ -350,7 +403,6 @@ class FormativeStudyService:
 
     def combined_export(self, study_id: str) -> dict[str, Any]:
         study = self.researcher_detail(study_id)
-        schema = self._schema_for(study)
         prototype_logs = [self.prototype.export_study_log(row["session_id"])
                           for row in study["prototype_sessions"]]
         questionnaire = {entry["section_id"]: {
@@ -358,7 +410,7 @@ class FormativeStudyService:
             "submitted_at": entry["submitted_at"], "response": entry["response"], "draft": entry["draft"]}
             for entry in study["responses"]}
         return {
-            "export_version": 2, "instrument_id": schema["instrument_id"],
+            "export_version": 2, "instrument_id": study["config"].get("instrument_id", "unknown"),
             "questionnaire_version": study["config"]["questionnaire_version"],
             "material_set_version": study["config"]["material_set_version"],
             "study_mode": study["config"]["study_mode"],
@@ -404,13 +456,14 @@ class FormativeStudyService:
         combined = self.combined_export(study_id)
         sheets = {
             "Study": [["Field", "Value"], *[[key, safe_csv(value)] for key, value in combined["study"].items()]],
-            "Questionnaire": [["Section", "Field", "Value", "Started UTC", "Submitted UTC"]],
+            "Questionnaire": [["Questionnaire version", "Section", "Field", "Value", "Started UTC", "Submitted UTC"]],
             "Prototype Sessions": [["Ordinal", "Session ID", "Item ID", "Stage", "Log JSON"]],
             "Events": [["Source", "Event type", "Recorded UTC", "Payload JSON"]],
         }
         for section, record in combined["questionnaire"].items():
             for field_id, value in (record.get("response") or record.get("draft") or {}).items():
-                sheets["Questionnaire"].append([section, field_id, safe_csv(value), record["started_at"], record["submitted_at"]])
+                sheets["Questionnaire"].append([combined["questionnaire_version"], section, field_id,
+                                                 safe_csv(value), record["started_at"], record["submitted_at"]])
         for index, log in enumerate(combined["prototype_sessions"]):
             sheets["Prototype Sessions"].append([index, log["session_id"], log["item_id"], log["stage"], _json_for_export(log)])
             for event in log.get("events", []):

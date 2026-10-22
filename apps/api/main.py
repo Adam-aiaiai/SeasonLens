@@ -49,7 +49,8 @@ if __name__ == "__main__":
 sys.path.insert(0, str(REPOSITORY_ROOT / "packages" / "backend-core" / "src"))
 sys.path.insert(0, str(REPOSITORY_ROOT / "extensions" / "seasonlens" / "backend" / "src"))
 
-from seasonlens import FormativeStudyService, PersistentRepository, ResearcherAuth, SeasonLensService  # noqa: E402
+from seasonlens import (FormativeStudyService, PersistentRepository, QuestionnaireValidationError,
+                        ResearcherAuth, SeasonLensService)  # noqa: E402
 
 WEB_ROOT = REPOSITORY_ROOT / "apps" / "web"
 EXPORT_ROOT = REPOSITORY_ROOT / "runtime-data" / "seasonlens"
@@ -151,6 +152,33 @@ class SeasonLensHandler(BaseHTTPRequestHandler):
         with SERVICE_LOCK:
             self._post()
 
+    def do_DELETE(self) -> None:  # noqa: N802
+        with SERVICE_LOCK:
+            self._delete()
+
+    def _delete(self) -> None:
+        try:
+            path = urlparse(self.path).path
+            parts = self._parts(path)
+            if len(parts) != 4 or parts[:3] != ["api", "researcher", "studies"]:
+                self._error(HTTPStatus.NOT_FOUND, "Unknown endpoint.")
+                return
+            session = self._researcher(require_csrf=True)
+            body = self._read_json()
+            self._json(STUDIES.delete_study(
+                parts[3], session["username"], str(body.get("confirmation", ""))))
+        except json.JSONDecodeError:
+            self._error(HTTPStatus.BAD_REQUEST, "Request body must be valid JSON.")
+        except PermissionError as error:
+            self._error(HTTPStatus.UNAUTHORIZED, str(error))
+        except (ValueError, TypeError) as error:
+            message = str(error).lower()
+            status = HTTPStatus.NOT_FOUND if "not found" in message or "unknown study" in message else HTTPStatus.UNPROCESSABLE_ENTITY
+            self._error(status, str(error))
+        except Exception as error:  # pragma: no cover
+            self.log_error("DELETE failed: %s", error)
+            self._error(HTTPStatus.INTERNAL_SERVER_ERROR, "Unable to delete the selected study record.")
+
     def _post(self) -> None:
         try:
             path = urlparse(self.path).path
@@ -247,6 +275,15 @@ class SeasonLensHandler(BaseHTTPRequestHandler):
             self._error(HTTPStatus.BAD_REQUEST, "Request body must be valid JSON.")
         except PermissionError as error:
             self._error(HTTPStatus.UNAUTHORIZED, str(error))
+        except QuestionnaireValidationError as error:
+            self._json({
+                "error": str(error),
+                "message": {
+                    "zh": "请先完成本部分所有必填题目，再继续。",
+                    "en": "Please complete all required questions in this section before continuing.",
+                },
+                "validation_errors": error.errors,
+            }, HTTPStatus.UNPROCESSABLE_ENTITY)
         except (ValueError, TypeError) as error:
             participant_message = "请检查你的回答并完成当前步骤后再继续。"
             self._error(HTTPStatus.CONFLICT,

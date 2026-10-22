@@ -1,55 +1,75 @@
 # SeasonLens formative participant questionnaire
 
-The authoritative source for the original instrument is
-`SeasonLens_Formative_Participant_Questionnaire_v3_Bilingual.docx`. Its preserved
-executable transcription remains at
-`extensions/seasonlens/data/formative_questionnaire_v3.json`.
+The active bilingual questionnaire is v3.2 at
+`extensions/seasonlens/data/formative_questionnaire_v3_2.json`. The original v3
+instrument and the complete v3.1 definition remain at
+`formative_questionnaire_v3.json` and `formative_questionnaire_v3_1.json` for
+historical interpretation and in-progress study recovery.
 
-The current default is the bilingual v3.1 revision at
-`extensions/seasonlens/data/formative_questionnaire_v3_1.json`. It preserves the
-A–E structure, IDs, response types, observation-first intent, uncertainty options,
-and D5/D6 constructs. Wording in B–D now foregrounds visible evidence of seasonal
-plant conditions and changes without identifying a correct stage or expected cue.
-
-## Stable field map
+## Active v3.2 field map
 
 | Section | Fields |
 | --- | --- |
 | A | `A1`, `A2`, `A3`, `A4`, `A5`, `A6`, `A6_INFO` |
-| B | `B1`, `B2`, `B3`, `B4`, `B5`, `B5_CONFIDENCE` |
+| B | `B1`, `B2`, `B3`, `B4`, `B4_CONFIDENCE` |
 | C | `C1`, `C2`, `C3`, `C4`, `C5`, `C6` |
 | D | `D1`, `D2`, `D3`, `D4`, `D_CONFIDENCE`, `D5`, `D6` |
 | E | `E1`, `E2`, `E3`, `E3_WHY`, `E4` |
 
-`D_CONFIDENCE` remains an independent field after D4. D5 records when help would
-have been wanted and why; D6 records the desired kind of help. All questions remain
-skippable. Confidence fields accept 1–5 or blank, and choice values remain stable
-language-neutral codes.
+The executable schema contains 30 fields: 7 + 5 + 6 + 7 + 5. Of these, 25
+are required; `A2`, `A4`, `A5`, `A6`, and `A6_INFO` are optional. `A6_INFO` is
+shown only after a nonblank A6 response other than `never`; `E3_WHY` is required
+when E3 has a selection. Drafts may remain incomplete, but applicable required
+fields must be answered before submission.
 
-## v3.1 materials
+### Section B v3.2 change
 
-- B: `B_PROTO_ITEM_1_ANEMONE_001`, directly referencing prototype item 1
-  (`/assets/real/anemone_virginiana_001.jpg`).
-- C earlier: `C_SAME_PLANT_T1_001` (unchanged).
-- C current: `C_SAME_PLANT_T2_001` (unchanged).
-- D: `D_PROTO_ITEM_2_SOLIDAGO_001`, directly referencing prototype item 2
-  (`/assets/real/solidago_canadensis_001.jpg`).
+The former v3.1 B4 about changing viewing distance, angle, or position is not in
+v3.2. The former seasonal-judgment B5 is now B4, followed immediately by the
+renamed numeric confidence field B4_CONFIDENCE. No active Section B ID has a gap.
 
-The schema records source provenance and SHA-256 for every image. Existing v3
-study rows retain their original material records; new rows store material-set
-version `3.1`.
+### Section C v3.2 change
 
-## Workflow and unaided-stage guarantee
+C2 now asks which plant parts were compared and what differed. C3 asks about
+difficulty or uncertainty without assuming it occurred. C4 asks participants to
+connect visible differences to a possible growth-related change and explain why.
+C1, C5, and C6 are unchanged from v3.1.
 
-New v3.1 studies use `study_mode=self_guided` and
-`enable_prototype_stage=false`: Consent→A→B→C→D→E→Completion. E refers only to
-the observation tasks completed in B, C, and D.
+## Materials
 
-B, C, and D projections expose only image paths, material IDs, task metadata, and
-question fields. They contain no correct answer, expert or target region, score,
-diagnosis, hint, or reveal. Server-side transitions prevent future-section access,
-duplicate submission, and stage skipping while preserving drafts and resume.
+Questionnaire v3.2 reuses material-set version `3.1` without changing images:
 
-Historical v3 studies retain their stored researcher-assisted workflow and may
-continue through the linked prototype stage. `/prototype.html` and its authored
-items, diagnostics, hints, logs, and tests remain unchanged.
+- B: `B_PROTO_ITEM_1_ANEMONE_001` at
+  `/assets/real/anemone_virginiana_001.jpg`.
+- C: `C_SAME_PLANT_T1_001` and `C_SAME_PLANT_T2_001`.
+- D: `D_PROTO_ITEM_2_SOLIDAGO_001` at
+  `/assets/study/section-d-solidago.png`.
+
+The schema records project-relative paths, provenance, and SHA-256 values. The
+participant projection omits hashes and provenance.
+
+## Workflow and version compatibility
+
+New v3.2 studies use `study_mode=self_guided` and
+`enable_prototype_stage=false`: Consent → A → B → C → D → E → Completion.
+The prototype is not part of this default flow.
+
+Every study stores its questionnaire version at creation. Resume, autosave,
+validation, and submission resolve that stored version, so a partially completed
+v3.1 study continues with the preserved v3.1 IDs and wording. Researcher details
+and every export expose `questionnaire_version`; raw response IDs are never
+renamed. Consequently, v3.1 B4 (viewing position), B5 (seasonal judgment), and
+B5_CONFIDENCE remain distinct from v3.2 B4 (seasonal judgment) and
+B4_CONFIDENCE. Unknown versions remain researcher-readable/exportable as raw IDs
+but are not projected to participants using a guessed schema.
+
+Historical v3 studies retain their researcher-assisted workflow and may continue
+through the linked prototype stage. No stored response is migrated or rewritten.
+
+## External-document synchronization
+
+The repository does not contain an editable copy of the external Word
+questionnaire named by the historical schemas. That Word document requires
+manual synchronization with the v3.2 definition before supervisor or ethics
+submission. This documentation records implementation state only and does not
+claim ethics approval.
