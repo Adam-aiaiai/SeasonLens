@@ -33,6 +33,24 @@ h2 { font: 700 clamp(1.35rem, 3vw, 1.8rem)/1.2 Georgia, serif; }
 .instruction-definitions { display: grid; grid-template-columns: minmax(120px, max-content) 1fr; gap: 12px 18px; margin: 26px 0; padding: 20px; border-radius: 9px; background: #f3f6f0; }
 .participant-code-form { max-width: 420px; margin-top: 26px; }
 .participant-code-form button { margin-top: 6px; }
+.consent-page { max-width: 800px; }
+.research-title { max-width: 64ch; font: 700 clamp(1.25rem, 2.6vw, 1.65rem)/1.3 Georgia, serif; }
+.research-title-label { margin-top: 16px; }
+.participant-information { margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--line); }
+.consent-page .participant-code-form { max-width: none; }
+.consent-page #participant-id { width: min(100%, 420px); border: 1px solid #aebbb1; border-radius: 7px; padding: 11px; background: #fff; color: var(--ink); }
+.consent-statements { margin: 26px 0 14px; }
+.consent-statements legend { margin-bottom: 12px; font-size: 1.1rem; }
+.consent-statement { display: flex; gap: 12px; align-items: flex-start; margin: 0 0 10px; padding: 14px; border: 1px solid var(--line); border-radius: 9px; background: #fff; cursor: pointer; }
+.consent-statement:hover { border-color: #a9b9ac; background: #fafcf9; }
+.consent-statement:has(input:checked) { border-color: #7fa18a; background: #f2f8f2; }
+.consent-statement input { flex: 0 0 auto; width: 1.1rem; height: 1.1rem; margin-top: .18rem; accent-color: var(--leaf); }
+.consent-statement strong, .consent-statement span[lang] { display: block; }
+.consent-statement strong { margin-bottom: 5px; color: var(--leaf-dark); }
+.consent-statement span[lang="en"] { font-weight: 550; line-height: 1.45; }
+.consent-statement span[lang="zh-CN"] { margin-top: 6px; color: var(--muted); font-weight: 500; line-height: 1.55; }
+.consent-validation { margin: 0 0 12px; padding: 10px 12px; border-left: 4px solid #b84228; background: #fff2ef; color: #9a2f1b; font-weight: 700; }
+.consent-validation[hidden] { display: none; }
 .study-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, .9fr); }
 .visual-panel { padding: 22px; border-right: 1px solid var(--line); background: #f3f6f0; }
 .form-panel { padding: 26px; }

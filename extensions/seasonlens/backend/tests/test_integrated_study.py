@@ -1,21 +1,26 @@
 import io
 import json
+import os
 import sqlite3
 import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest.mock import patch
 
 from seasonlens import (
     FormativeStudyService,
     PersistentRepository,
     QuestionnaireValidationError,
     ResearcherAuth,
+    password_hash,
+    valid_password_hash,
     SeasonLensService,
 )
 
 
 class IntegratedStudyTests(unittest.TestCase):
+    CONSENT = {f"statement_{number}": True for number in range(1, 5)}
     REQUIRED = {
         "A": {"A1": "prefer_not_to_answer", "A3": "not_sure"},
         "B": {"B1": "Not sure", "B2": "Not sure", "B3": "Not sure", "B4": "Not sure",
@@ -40,7 +45,7 @@ class IntegratedStudyTests(unittest.TestCase):
         self.directory.cleanup()
 
     def create(self, *, legacy=False):
-        projection, token = self.studies.create("F-001", consent_acknowledged=True)
+        projection, token = self.studies.create("F-001", consent_statements=self.CONSENT)
         if legacy:
             config = {
                 "instrument_id": "SeasonLens_Formative_Participant_Questionnaire_v3_Bilingual",
@@ -54,6 +59,27 @@ class IntegratedStudyTests(unittest.TestCase):
                                (json.dumps(config), projection["study_id"]))
             projection = self.studies.participant_projection(projection["study_id"], token)
         return projection["study_id"], token, projection
+
+    def test_consent_requires_all_four_statements_and_records_official_metadata(self):
+        for checked_count in range(4):
+            partial = {f"statement_{number}": number <= checked_count for number in range(1, 5)}
+            with self.assertRaisesRegex(ValueError, "all four informed consent statements"):
+                self.studies.create(f"F-PARTIAL-{checked_count}", consent_statements=partial)
+
+        study_id, _, _ = self.create()
+        stored = self.repository.get_study(study_id)
+        self.assertEqual(stored["config"]["consent"], {
+            "confirmed": True,
+            "confirmed_at": stored["created_at"],
+            "document_version": "1.0",
+            "document_date": "2026-10-21",
+            "statements": self.CONSENT,
+            "statement_ids": ["statement_1", "statement_2", "statement_3", "statement_4"],
+        })
+        created_event = self.repository.events_for_study(study_id)[0]
+        self.assertTrue(created_event["payload"]["consent_confirmed"])
+        self.assertEqual(created_event["payload"]["consent_document_version"], "1.0")
+        self.assertEqual(created_event["payload"]["consent_document_date"], "2026-10-21")
 
     def release_and_submit(self, study_id, token, section, values):
         waiting = self.studies.participant_projection(study_id, token)
@@ -219,7 +245,7 @@ class IntegratedStudyTests(unittest.TestCase):
     def test_in_progress_v3_1_study_resumes_against_preserved_schema(self):
         v31_path = Path(__file__).resolve().parents[2] / "data" / "formative_questionnaire_v3_1.json"
         v31_service = FormativeStudyService(self.repository, self.prototype, schema_path=v31_path)
-        projection, token = v31_service.create("F-V31", consent_acknowledged=True)
+        projection, token = v31_service.create("F-V31", consent_statements=self.CONSENT)
         study_id = projection["study_id"]
         projection = v31_service.submit(study_id, token, projection["version"], self.REQUIRED["A"])
         old_draft = {"B4": "Changed viewing angle", "B5": "Seasonal judgment", "B5_CONFIDENCE": 4}
@@ -297,6 +323,43 @@ class IntegratedStudyTests(unittest.TestCase):
 
 
 class ResearcherAuthTests(unittest.TestCase):
+    def test_password_hash_format_is_validated(self):
+        digest = password_hash("secret-password", salt=b"0123456789abcdef")
+        self.assertTrue(valid_password_hash(digest))
+        self.assertFalse(valid_password_hash("not-a-supported-hash"))
+
+    def test_invalid_hash_does_not_enable_authentication(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repository = PersistentRepository(f"sqlite:///{Path(directory) / 'auth.db'}")
+            try:
+                auth = ResearcherAuth(repository, username="lead", password_digest="invalid")
+                self.assertFalse(auth.configured)
+                self.assertEqual(
+                    auth.configuration_errors,
+                    ("SEASONLENS_RESEARCHER_PASSWORD_HASH is invalid",),
+                )
+                with self.assertRaises(PermissionError):
+                    auth.login("lead", "secret-password")
+            finally:
+                repository.close()
+
+    def test_railway_requires_hash_and_ignores_development_password(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repository = PersistentRepository(f"sqlite:///{Path(directory) / 'auth.db'}")
+            try:
+                with patch.dict(os.environ, {"RAILWAY_ENVIRONMENT": "production"}):
+                    auth = ResearcherAuth(
+                        repository, username="lead", password_digest="",
+                        development_password="secret-password",
+                    )
+                self.assertFalse(auth.configured)
+                self.assertEqual(
+                    auth.configuration_errors,
+                    ("SEASONLENS_RESEARCHER_PASSWORD_HASH is missing",),
+                )
+            finally:
+                repository.close()
+
     def test_authentication_csrf_and_expiry_storage(self):
         with tempfile.TemporaryDirectory() as directory:
             repository = PersistentRepository(f"sqlite:///{Path(directory) / 'auth.db'}")

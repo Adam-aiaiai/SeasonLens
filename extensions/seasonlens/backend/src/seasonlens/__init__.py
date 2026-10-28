@@ -16,7 +16,7 @@ from .domain import (
 from .service import SeasonLensService
 from .storage import PersistentRepository
 from .study import FormativeStudyService, QuestionnaireValidationError
-from .auth import ResearcherAuth, password_hash
+from .auth import ResearcherAuth, password_hash, valid_password_hash
 
 __all__ = [
     "CONDITION",
@@ -38,4 +38,5 @@ __all__ = [
     "select_hint_decision",
     "validate_region_selection",
     "password_hash",
+    "valid_password_hash",
 ]

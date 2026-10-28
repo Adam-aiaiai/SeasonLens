@@ -33,6 +33,9 @@ METADATA_FIELDS = {
     "D": {"D_MATERIAL_ID", "D_START_TIME_MANUAL", "D_FIELD_BASED"},
     "E": set(),
 }
+CONSENT_STATEMENT_IDS = ("statement_1", "statement_2", "statement_3", "statement_4")
+CONSENT_DOCUMENT_VERSION = "1.0"
+CONSENT_DOCUMENT_DATE = "2026-10-21"
 
 
 def utc_now() -> str:
@@ -80,18 +83,33 @@ class FormativeStudyService:
                 "study_mode": self.schema["study_defaults"]["study_mode"],
                 "enable_prototype_stage": self.schema["study_defaults"]["enable_prototype_stage"]}
 
-    def create(self, participant_id: str, *, consent_acknowledged: bool = False) -> tuple[dict[str, Any], str]:
+    def create(self, participant_id: str, *,
+               consent_statements: dict[str, bool] | None = None) -> tuple[dict[str, Any], str]:
         participant_id = participant_id.strip()
         if not participant_id or len(participant_id) > 80:
             raise ValueError("A researcher-assigned participant ID is required (maximum 80 characters).")
-        if consent_acknowledged is not True:
-            raise ValueError("The participant must acknowledge the study information before beginning.")
+        if (not isinstance(consent_statements, dict)
+                or set(consent_statements) != set(CONSENT_STATEMENT_IDS)
+                or any(consent_statements[statement_id] is not True
+                       for statement_id in CONSENT_STATEMENT_IDS)):
+            raise ValueError(
+                "请勾选全部四项知情同意声明后再继续。 / "
+                "Please check all four informed consent statements before continuing.")
         study_id = str(uuid4())
         token = secrets.token_urlsafe(32)
         now = self.clock()
+        consent = {
+            "confirmed": True,
+            "confirmed_at": now,
+            "document_version": CONSENT_DOCUMENT_VERSION,
+            "document_date": CONSENT_DOCUMENT_DATE,
+            "statements": {statement_id: True for statement_id in CONSENT_STATEMENT_IDS},
+            "statement_ids": list(CONSENT_STATEMENT_IDS),
+        }
         config = {"instrument_id": self.schema["instrument_id"],
                   "questionnaire_version": self.schema["version"],
                   "material_set_version": self.schema["material_set_version"],
+                  "consent": consent,
                   **self.schema["study_defaults"]}
         materials = {
             section: {"section_id": section, "task_index": 0, "images": deepcopy(images),
@@ -105,7 +123,10 @@ class FormativeStudyService:
         self.repository.create_study(study, materials, self._event(
             study_id, "study.created", participant_id,
             {"participant_id": participant_id, **config,
-             "consent_acknowledged": True, "consent_acknowledged_at": now}, now))
+             "consent_confirmed": True, "consent_confirmed_at": now,
+             "consent_document_version": CONSENT_DOCUMENT_VERSION,
+             "consent_document_date": CONSENT_DOCUMENT_DATE,
+             "consent_statement_ids": list(CONSENT_STATEMENT_IDS)}, now))
         return self.participant_projection(study_id, token), token
 
     @staticmethod

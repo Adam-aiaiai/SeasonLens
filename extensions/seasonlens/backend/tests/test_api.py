@@ -16,6 +16,7 @@ from seasonlens import FormativeStudyService, PersistentRepository, ResearcherAu
 
 
 class ApiTests(unittest.TestCase):
+    CONSENT = {f"statement_{number}": True for number in range(1, 5)}
     REQUIRED = {
         "A": {"A1": "prefer_not_to_answer", "A3": "not_sure"},
         "B": {"B1": "Not sure", "B2": "Not sure", "B3": "Not sure", "B4": "Not sure", "B4_CONFIDENCE": 3},
@@ -137,6 +138,24 @@ class ApiTests(unittest.TestCase):
         for suffix in ["hint-override", "researcher-notes", "reset"]:
             self.assertEqual(self.request(f"/api/sessions/{session_id}/{suffix}", {}, researcher=False)[0], 401)
 
+    def test_researcher_login_rejects_incorrect_credentials_and_protects_dashboard_api(self):
+        status, text, _ = self.request(
+            "/api/researcher/login",
+            {"username": "researcher", "password": "incorrect-password"},
+        )
+        self.assertEqual(status, 401)
+        self.assertEqual(json.loads(text)["error"], "Invalid researcher credentials.")
+        self.assertEqual(self.request("/api/researcher/me")[0], 401)
+        self.assertEqual(self.request("/api/researcher/studies")[0], 401)
+
+    def test_health_reports_configured_auth_without_exposing_configuration(self):
+        status, text, _ = self.request("/api/health")
+        self.assertEqual(status, 200)
+        health = json.loads(text)
+        self.assertIs(health["researcher_auth_configured"], True)
+        self.assertNotIn("username", text.lower())
+        self.assertNotIn("password", text.lower())
+
     def test_http_flow_override_notes_and_exports(self):
         session_id = self.create()
         base = f"/api/sessions/{session_id}"
@@ -207,8 +226,20 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(log["initial_selected_semantic_region"], "large_leaf_region")
         self.assertEqual(log["revised_selected_semantic_region"], "upper_bud_region")
 
+    def test_study_creation_rejects_incomplete_consent_without_creating_a_session(self):
+        for checked_count in range(4):
+            statements = {f"statement_{number}": number <= checked_count for number in range(1, 5)}
+            status, text, headers = self.request(
+                "/api/studies", {"participant_id": f"F-CONSENT-{checked_count}",
+                                 "consent_statements": statements})
+            self.assertEqual(status, 409)
+            self.assertIn("all four informed consent statements", json.loads(text)["error"])
+            self.assertNotIn("Set-Cookie", headers)
+        self.assertEqual(self.api.REPOSITORY.list_studies(), [])
+
     def test_integrated_study_cookie_self_guided_and_export_security(self):
-        status, text, headers = self.request("/api/studies", {"participant_id": "F-HTTP", "consent_acknowledged": True})
+        status, text, headers = self.request(
+            "/api/studies", {"participant_id": "F-HTTP", "consent_statements": self.CONSENT})
         self.assertEqual(status, 201)
         created = json.loads(text)
         study_id = created["study_id"]
@@ -256,7 +287,7 @@ class ApiTests(unittest.TestCase):
 
     def test_required_submission_returns_structured_422_without_advancing(self):
         status, text, headers = self.request(
-            "/api/studies", {"participant_id": "F-VALIDATE", "consent_acknowledged": True})
+            "/api/studies", {"participant_id": "F-VALIDATE", "consent_statements": self.CONSENT})
         self.assertEqual(status, 201)
         created = json.loads(text)
         self.participant_cookie = headers["Set-Cookie"].split(";", 1)[0]
@@ -274,7 +305,7 @@ class ApiTests(unittest.TestCase):
         ids = []
         for participant_id in ("F-DELETE", "F-KEEP"):
             status, text, headers = self.request(
-                "/api/studies", {"participant_id": participant_id, "consent_acknowledged": True})
+                "/api/studies", {"participant_id": participant_id, "consent_statements": self.CONSENT})
             self.assertEqual(status, 201)
             ids.append(json.loads(text)["study_id"])
             self.participant_cookie = headers["Set-Cookie"].split(";", 1)[0]
@@ -297,7 +328,7 @@ class ApiTests(unittest.TestCase):
 
     def test_completed_participant_can_start_fresh_study_without_changing_old_record(self):
         status, text, headers = self.request(
-            "/api/studies", {"participant_id": "F-FIRST", "consent_acknowledged": True})
+            "/api/studies", {"participant_id": "F-FIRST", "consent_statements": self.CONSENT})
         self.assertEqual(status, 201)
         current = json.loads(text)
         first_id = current["study_id"]
@@ -326,7 +357,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual([row["study_id"] for row in json.loads(text)], [first_id])
 
         status, text, headers = self.request(
-            "/api/studies", {"participant_id": "F-SECOND", "consent_acknowledged": True},
+            "/api/studies", {"participant_id": "F-SECOND", "consent_statements": self.CONSENT},
             participant=True)
         self.assertEqual(status, 201)
         second = json.loads(text)

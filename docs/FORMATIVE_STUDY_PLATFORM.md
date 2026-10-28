@@ -108,12 +108,21 @@ retains all available event arrays; flat CSV stores nested histories as JSON.
 1. Attach a Railway PostgreSQL service and expose its `DATABASE_URL` to the app.
 2. Configure `SEASONLENS_RESEARCHER_USERNAME` and
    `SEASONLENS_RESEARCHER_PASSWORD_HASH` as Railway variables.
+   Paste the raw values without surrounding quotes. `SEASONLENS_RESEARCHER_PASSWORD`
+   is intentionally development-only and is ignored on Railway.
 3. Deploy the repository. `railway.json`/`Procfile` start the server on Railway’s
    `PORT`, and `/api/health` is the health check.
 4. Verify the health response reports `database: postgresql` and
    `researcher_auth_configured: true`.
 5. Sign in, create a non-production test study, restart the service, and verify the
    record resumes before enrolling participants.
+
+Railway does not read the repository-root `.env` because that file is intentionally
+gitignored and is not included in the deployment. Variable changes trigger a new
+deployment. If the password must be reset, run `python scripts/hash_researcher_password.py`
+locally, replace only `SEASONLENS_RESEARCHER_PASSWORD_HASH` in Railway with the
+printed hash, and redeploy. Do not paste the plaintext password into Railway or
+commit either credential value.
 
 Deployment does not require or authorize destructive migrations. Back up the
 PostgreSQL service before future schema changes. This implementation has not been

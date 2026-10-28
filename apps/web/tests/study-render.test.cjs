@@ -159,6 +159,60 @@ test("new-study configuration failure restores the retained button after current
     /无法开始新的测试 \/ Unable to start a new study: configuration unavailable/);
 });
 
+test("consent page renders the official bilingual title and all four verbatim statements", () => {
+  const f = fixture();
+  f.context.config = { participant_notice: { zh: "参与者信息", en: "Participant information" } };
+  f.run("renderWelcome(config)");
+  const html = f.elements["#study-app"].innerHTML;
+  assert.match(html, /Learning to See the Seasons: Designing Contingent AI Scaffolds for Independent Situated Ecological Observation/);
+  assert.match(html, /学会观测四季：面向自主情境化生态观察的条件式 AI 支架设计/);
+  assert.match(html, /Informed Consent Statements \/ 知情同意声明/);
+  assert.equal((html.match(/class="consent-statement"/g) || []).length, 4);
+  assert.equal((html.match(/type="checkbox" aria-required="true"/g) || []).length, 4);
+  assert.doesNotMatch(html, /type="checkbox"[^>]*\schecked/);
+  assert.match(html, /I confirm that I have read and have understood the information sheet dated Version 1\.0, 21 October 2026/);
+  assert.match(html, /本人确认已阅读并充分理解上述研究参与者告知Version 1\.0, 21 October 2026相关内容。/);
+  assert.match(html, /I understand that my participation is voluntary and that I am free to withdraw at any time/);
+  assert.match(html, /本人理解，参与本研究完全出于自愿。/);
+  assert.match(html, /as explained in section #13 of the Participant Information Sheet\./);
+  assert.match(html, /按照《参与者告知书》第13条的说明/);
+  assert.match(html, /I agree to take part in the above study\./);
+  assert.match(html, /本人同意参与上述研究。/);
+});
+
+test("zero through three consent checks cannot create a study; all four can", async () => {
+  let creates = 0;
+  const projection = {
+    study_id: "consented-study", participant_id: "F-CONSENT", stage: "A", version: 0,
+    study_mode: "self_guided", progress: { completed: [], current: "A", stages: ["A", "B", "C", "D", "E"] },
+    section: schema.sections.A, draft: {}, updated_at: "2026-10-21T00:00:00Z",
+  };
+  const f = fixture(async (path, options) => {
+    creates += 1;
+    assert.equal(path, "/api/studies");
+    const payload = JSON.parse(options.body);
+    assert.deepEqual(Object.values(payload.consent_statements), [true, true, true, true]);
+    return { ok: true, status: 201, json: async () => projection };
+  });
+  f.context.config = { participant_notice: { zh: "说明", en: "Notice" } };
+  f.run("renderWelcome(config)");
+  f.elements["#participant-id"] = new Element();
+  f.elements["#participant-id"].value = "F-CONSENT";
+  const checkboxes = [1, 2, 3, 4].map(number => f.elements[`#consent-statement_${number}`]);
+  const form = f.elements["#start-study-form"];
+  const event = { preventDefault() {}, currentTarget: form };
+  for (let checkedCount = 0; checkedCount < 4; checkedCount += 1) {
+    checkboxes.forEach((checkbox, index) => { checkbox.checked = index < checkedCount; });
+    await form.listeners.submit(event);
+    assert.equal(creates, 0);
+    assert.match(f.elements["#status"].textContent, /Please check all four informed consent statements/);
+  }
+  checkboxes.forEach(checkbox => { checkbox.checked = true; });
+  await form.listeners.submit(event);
+  assert.equal(creates, 1);
+  assert.match(f.elements["#study-app"].innerHTML, /Section A/);
+});
+
 test("repeated welcome submission creates only one new study run", async () => {
   let creates = 0;
   const config = { participant_notice: { zh: "说明", en: "Notice" } };
@@ -175,9 +229,10 @@ test("repeated welcome submission creates only one new study run", async () => {
   f.context.config = config;
   f.run("renderWelcome(config)");
   f.elements["#participant-id"] = new Element();
-  f.elements["#consent-acknowledged"] = new Element();
   f.elements["#participant-id"].value = "F-NEW";
-  f.elements["#consent-acknowledged"].checked = true;
+  for (let number = 1; number <= 4; number += 1) {
+    f.elements[`#consent-statement_${number}`].checked = true;
+  }
   const form = f.elements["#start-study-form"];
   const event = { preventDefault() {}, currentTarget: form };
   await Promise.all([form.listeners.submit(event), form.listeners.submit(event)]);

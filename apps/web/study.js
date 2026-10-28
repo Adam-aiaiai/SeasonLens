@@ -57,30 +57,90 @@ function normalizeStudyResponse(value) {
   return value;
 }
 
+const CONSENT_STATEMENTS = [
+  {
+    id: "statement_1",
+    en: "I confirm that I have read and have understood the information sheet dated Version 1.0, 21 October 2026 for the above study. I have had the opportunity to consider the information, ask questions and have had these answered satisfactorily.",
+    zh: "本人确认已阅读并充分理解上述研究参与者告知Version 1.0, 21 October 2026相关内容。本人已充分考量相关信息，且有机会提出疑问，并已得到满意解答。",
+  },
+  {
+    id: "statement_2",
+    en: "I understand that my participation is voluntary and that I am free to withdraw at any time without giving any reason, without my rights being affected. In addition, I understand that I am free to decline to answer any particular question or questions.",
+    zh: "本人理解，参与本研究完全出于自愿。我可以随时退出研究，无须说明理由，且不会因此影响我的任何权益。此外，我有权拒绝回答任何特定问题。",
+  },
+  {
+    id: "statement_3",
+    en: "I understand that I can withdraw from this study at any time and request the destruction of my data. I also understand that this right is limited, and it will no longer be possible to withdraw my data after it has been fully anonymised or included in an aggregated analysis, as explained in section #13 of the Participant Information Sheet.",
+    zh: "本人知晓可随时退出本研究，并申请销毁本人相关研究数据。同时本人亦清楚，该权利存在相应限制：按照《参与者告知书》第13条的说明，数据一旦完成完全匿名化处理或纳入汇总分析后，将无法再撤回相关数据。",
+  },
+  {
+    id: "statement_4",
+    en: "I agree to take part in the above study.",
+    zh: "本人同意参与上述研究。",
+  },
+];
+const CONSENT_VALIDATION_MESSAGE = "请勾选全部四项知情同意声明后再继续。 / Please check all four informed consent statements before continuing.";
+
+function consentSelections() {
+  return Object.fromEntries(CONSENT_STATEMENTS.map(statement => [
+    statement.id,
+    document.querySelector(`#consent-${statement.id}`).checked,
+  ]));
+}
+
 function renderWelcome(config) {
   creatingStudy = false;
   startingNewStudy = false;
   progress.hidden = true;
-  app.innerHTML = `<div class="introduction bilingual-intro">
-    <p class="eyebrow">Welcome / 欢迎</p><h2>SeasonLens 形成性研究</h2>
+  app.innerHTML = `<div class="introduction bilingual-intro consent-page">
+    <p class="eyebrow">Title of the Research Project:</p>
+    <div class="research-title" lang="en">Learning to See the Seasons: Designing Contingent AI Scaffolds for Independent Situated Ecological Observation</div>
+    <p class="eyebrow research-title-label">项目名称：</p>
+    <div class="research-title">学会观测四季：面向自主情境化生态观察的条件式 AI 支架设计</div>
+    <div class="participant-information">
+      <p class="eyebrow">Welcome / 欢迎</p><h2>SeasonLens 形成性研究</h2>
     <p>${escapeHtml(config.participant_notice.zh)}</p><p lang="en">${escapeHtml(config.participant_notice.en)}</p>
     <p class="privacy-note">本系统只收集研究员分配的匿名编号，请勿填写姓名、邮箱或其他身份信息。<br><span lang="en">Enter only the anonymous code assigned by the researcher; do not enter your name, email, or other identifying information.</span></p>
+    </div>
     <form id="start-study-form" class="participant-code-form">
       <label for="participant-id">参与者编号 / Participant ID</label>
       <input id="participant-id" maxlength="80" autocomplete="off" required>
-      <label class="metadata-field checkbox-label"><input id="consent-acknowledged" type="checkbox" required> 我已阅读以上研究信息并同意开始。 / I have read the study information above and agree to begin.</label>
-      <button type="submit">开始 / Begin</button>
+      <fieldset class="consent-statements" aria-describedby="consent-validation">
+        <legend>Informed Consent Statements / 知情同意声明</legend>
+        ${CONSENT_STATEMENTS.map((statement, index) => `<label class="consent-statement" for="consent-${statement.id}">
+          <input id="consent-${statement.id}" name="${statement.id}" type="checkbox" aria-required="true">
+          <span><strong>Statement ${index + 1}</strong><span lang="en">${escapeHtml(statement.en)}</span><span lang="zh-CN">${escapeHtml(statement.zh)}</span></span>
+        </label>`).join("")}
+      </fieldset>
+      <p id="consent-validation" class="consent-validation" role="alert" hidden>${CONSENT_VALIDATION_MESSAGE}</p>
+      <button type="submit">Agree and Start Study / 同意并开始研究</button>
     </form>
   </div>`;
+  CONSENT_STATEMENTS.forEach(statement => {
+    document.querySelector(`#consent-${statement.id}`).addEventListener("change", () => {
+      document.querySelector("#consent-validation").hidden = true;
+    });
+  });
   document.querySelector("#start-study-form").addEventListener("submit", async event => {
     event.preventDefault();
     if (creatingStudy) return;
+    const consentStatements = consentSelections();
+    if (!Object.values(consentStatements).every(Boolean)) {
+      const validation = document.querySelector("#consent-validation");
+      validation.hidden = false;
+      setStatus(CONSENT_VALIDATION_MESSAGE, true);
+      const firstUnchecked = CONSENT_STATEMENTS
+        .map(statement => document.querySelector(`#consent-${statement.id}`))
+        .find(checkbox => !checkbox.checked);
+      firstUnchecked?.focus?.();
+      return;
+    }
     creatingStudy = true;
     const submit = event.currentTarget.querySelector('button[type="submit"]');
     if (submit) submit.disabled = true;
     try {
       setStatus("正在创建研究记录… / Creating study record…");
-      study = normalizeStudyResponse(await api("/api/studies", { method: "POST", body: JSON.stringify({ participant_id: document.querySelector("#participant-id").value.trim(), consent_acknowledged: document.querySelector("#consent-acknowledged").checked }) }));
+      study = normalizeStudyResponse(await api("/api/studies", { method: "POST", body: JSON.stringify({ participant_id: document.querySelector("#participant-id").value.trim(), consent_statements: consentStatements }) }));
       render();
     } catch (error) {
       creatingStudy = false;

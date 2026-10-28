@@ -186,7 +186,7 @@ class SeasonLensHandler(BaseHTTPRequestHandler):
             if path == "/api/studies":
                 projection, token = STUDIES.create(
                     str(body.get("participant_id", "")),
-                    consent_acknowledged=body.get("consent_acknowledged") is True)
+                    consent_statements=body.get("consent_statements"))
                 cookie = self._cookie("seasonlens_participant", f"{projection['study_id']}.{token}", max_age=2592000)
                 self._json(projection, HTTPStatus.CREATED, headers={"Set-Cookie": cookie})
                 return
@@ -431,7 +431,9 @@ def main() -> None:
     print(f"SeasonLens: http://{args.host}:{args.port}")
     print(f"Database: {'PostgreSQL' if REPOSITORY._postgres else REPOSITORY.database_url}")
     if not AUTH.configured:
-        print("WARNING: researcher login is disabled until credentials are configured.")
+        print("WARNING: researcher login is disabled: " + "; ".join(AUTH.configuration_errors) + ".")
+    elif AUTH.using_development_password:
+        print("WARNING: researcher login is using the local development password variable; configure a password hash before deployment.")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
